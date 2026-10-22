@@ -24,7 +24,8 @@ https://raw.githubusercontent.com/Deasus/health-feeds/status/status.json    # he
 | `ecdc` | `cdtr.json` | ECDC Communicable Disease Threats Report RSS | 6 h | CC BY 4.0 |
 | `hdx` | `datasets.json` | HDX CKAN, outbreak datasets by title | 6 h | per dataset (carried on each event) |
 | `fda` | `recalls.json` | openFDA food enforcement (ongoing recalls with a pathogen) | 6 h | public domain |
-| `gdelt` | `articles.json` | GDELT DOC 2.0, health themes and keywords, English | 30 min | GDELT terms; headlines © publishers |
+| `gdelt` | `articles.json` | GDELT DOC 2.0, health themes and keywords (one translingual slot per rotation) | 30 min | GDELT terms; headlines © publishers |
+| `gnews` | `articles.json` | Google News RSS, 20 health queries, English | 30 min | headlines © publishers; RSS used for discovery |
 | `reliefweb` | `disasters.json` | ReliefWeb API v2, disasters typed Epidemic (needs `RELIEFWEB_APPNAME`) | 30 min | attribution |
 | `extract` | `events.json` | the merge of everything above | 15 min | see each event |
 | `status` | `status.json` | per-feed health written by the conductor | 5 min | — |
@@ -53,6 +54,13 @@ Files are `{generated_at, upstream, credit, licence, count, …, items: [...]}`.
 tables: `cdc/nndss.json.table` (every state × condition with a count this week), `cdc/nwss.json.summaries`
 (per pathogen, per state: sites, detecting %, rising %), `travel/state.json.advisories` (every
 country's current advisory), `gdelt/articles.json.articles` (headline rows).
+
+**The curator pass (`feeds/extract/llm_extract.py`, PLAN §4.6):** with `ANTHROPIC_API_KEY` set, Claude Haiku reads every
+news headline once (cached 72 h in `extract/llm_cache.json`, at most 300 new headlines per run, thinking disabled): items
+that are not outbreak news are dropped; pathogen, country, a stated city and verbatim counts are filled in; the city
+becomes a point (GeoNames gazetteer, `feeds/_shared/gazetteer.py` + `cities.json`, CC BY 4.0, 12,456 cities ≥ 50k plus
+capitals, ~15 km radius) once the item is corroborated. Official country-level events whose own text names a city are
+placed at that city too (`city-from-text`). Without the key the merge runs rule-based only.
 
 **Rules the merge applies (`feeds/extract/build_events.py`):** events older than 45 days are dropped;
 `corroboration` counts distinct non-news sources naming the same pathogen in the same country within
@@ -86,7 +94,7 @@ Outputs land in `work/<feed>/data/`. Python 3.9+ and the standard library only.
 
 Secrets (GitHub Actions, all optional): `SOCRATA_APP_TOKEN` (lifts data.cdc.gov throttling),
 `OPENFDA_API_KEY` (120,000 requests/day instead of 1,000), `RELIEFWEB_APPNAME` (enables the
-ReliefWeb feed), `ANTHROPIC_API_KEY` (reserved for the extraction stage, not wired yet).
+ReliefWeb feed), `ANTHROPIC_API_KEY` (enables the curator pass; set 2026-10-22).
 
 ## Known sensitivities
 

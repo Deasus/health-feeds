@@ -10,7 +10,7 @@ from datetime import datetime, timezone, timedelta
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FEEDS = os.path.join(ROOT, 'feeds')
 FIX = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures')
-for d in ['_shared', 'who', 'cdc', 'travel', 'ecdc', 'hdx', 'gdelt', 'fda', 'reliefweb', 'extract']:
+for d in ['_shared', 'who', 'cdc', 'travel', 'ecdc', 'hdx', 'gdelt', 'gnews', 'fda', 'reliefweb', 'extract']:
     sys.path.insert(0, os.path.join(FEEDS, d))
 os.environ['HF_OFFLINE'] = '1'
 
@@ -260,3 +260,83 @@ class RadiusAndDatesTests(unittest.TestCase):
         mod = importlib.import_module('fetch_cdc_nndss')
         self.assertEqual(mod.mmwr_week_end('2026', 41).strftime('%Y-%m-%d %a'), '2026-10-17 Sat')   # 2026 week 1 ends 10 Jan
         self.assertEqual(mod.mmwr_week_end('2026', 1).strftime('%Y-%m-%d %a'), '2026-01-10 Sat')
+
+
+class GazetteerTests(unittest.TestCase):
+    def test_find_places(self):
+        gazetteer = importlib.import_module('gazetteer')
+        hits = gazetteer.find_places('Ebola cases rise in Bunia and Goma', 'CD')
+        self.assertEqual([h['name'] for h in hits], ['Bunia', 'Goma'])
+        self.assertEqual(gazetteer.find_places('Mobile phone app tracks outbreaks'), [])          # stop-word without a hint
+        lansing = gazetteer.find_places('Measles outbreak in Lansing schools', 'US')[0]
+        self.assertEqual((lansing['country'], lansing['admin1']), ('US', 'MI'))
+        self.assertEqual(gazetteer.city('Nairobi')['country'], 'KE')
+
+
+class GoogleNewsTests(unittest.TestCase):
+    def test_decode(self):
+        mod = importlib.import_module('fetch_gnews')
+        root = ET.parse(fixture('gnews_measles.xml')).getroot()
+        rows = []
+        for it in hf.rss_items(root):
+            outlet = it['extra'].get('source') or ''
+            rows.append({'title': mod.clean_title(it['title'], outlet), 'url': it['link'], 'domain': outlet, 'seendate': it['pubDate'], '_q': ['measles outbreak']})
+        evs, out = mod.decode(rows, NOW)
+        self.assertEqual(len(out), 12)
+        self.assertTrue(all(not r['title'].endswith(' - ' + (r['domain'] or '')) for r in out))
+        self.assertTrue(evs and all(e['source'] == 'Google News' and e['pathogen'] == 'measles' and e['lat'] is None for e in evs))
+
+
+class CuratorTests(unittest.TestCase):
+    def fake_call(self, batch):
+        arr = []
+        for h in batch:
+            t = h['title'].lower()
+            if 'opinion' in t:
+                arr.append({'i': h['i'], 'outbreak': False})
+            elif 'pennsylvania' in t:
+                arr.append({'i': h['i'], 'outbreak': True, 'pathogen': 'measles', 'country': 'US', 'place': 'Pennsylvania', 'cases': 1317, 'deaths': 5, 'quote': '1,317 Measles Cases, 5 Deaths'})
+            elif 'bunia' in t:
+                arr.append({'i': h['i'], 'outbreak': True, 'pathogen': 'ebola', 'country': 'CD', 'place': 'Bunia', 'cases': 12, 'deaths': None, 'quote': '12 new cases'})
+            else:
+                arr.append({'i': h['i'], 'outbreak': True, 'pathogen': None, 'country': None, 'place': None, 'cases': None, 'deaths': None, 'quote': None})
+        return arr, {'input_tokens': 10, 'output_tokens': 10}
+
+    def test_enrich_and_merge(self):
+        import os, tempfile
+        llm = importlib.import_module('llm_extract'); be = importlib.import_module('build_events')
+        tmp = tempfile.mkdtemp(); llm.CACHE_FILE = os.path.join(tmp, 'llm_cache.json')
+        who = events.make(source='WHO DON', source_tier='official', kind='outbreak', title='Ebola - DRC', updated=NOW - timedelta(days=1),
+                          pathogen='ebola', country_code='CD', severity=events.SEVERE, source_id='w1',
+                          body='Cases were reported from Bunia health zone in Ituri province.')
+        news = events.make(source='GDELT', source_tier='news', kind='news', title='Unknown illness: 12 new cases in Bunia', updated=NOW,
+                           pathogen='unknown', lat=None, lng=None, geo_precision='none', source_id='n1')
+        opinion = events.make(source='GDELT', source_tier='news', kind='news', title='Opinion: measles and the politics of fear', updated=NOW,
+                              pathogen='measles', country_code='US', lat=None, lng=None, geo_precision='none', source_id='n2')
+        nndss = events.make(source='CDC NNDSS', source_tier='official', kind='surveillance', title='Measles - Pennsylvania', updated=NOW,
+                            pathogen='measles', country_code='US', admin1='Pennsylvania', admin1_code='PA', source_id='s1')
+        pa_news = events.make(source='Google News', source_tier='news', kind='news', title='Pennsylvania Reports 1,317 Measles Cases, 5 Deaths', updated=NOW,
+                              pathogen='measles', country_code='US', lat=None, lng=None, geo_precision='none', source_id='n3')
+        items = be.enrich_news([who, news, opinion, nndss, pa_news], NOW, call=self.fake_call)
+        self.assertEqual(len(items), 4)                                   # the opinion piece is dropped
+        pa = next(e for e in items if e['source'] == 'Google News')
+        self.assertEqual((pa['admin1_code'], pa['cases'], pa['deaths']), ('PA', 1317, 5))
+        n = next(e for e in items if e['source'] == 'GDELT')
+        self.assertEqual((n['pathogen'], n['country_code'], n['cases']), ('ebola', 'CD', 12))
+        self.assertIn('llm-extracted', n['tags'])
+        items = be.upgrade_official_places(items)
+        w = next(e for e in items if e['source'] == 'WHO DON')
+        self.assertEqual((w['geo_precision'], w['geo_radius_km']), ('point', 15.0))      # DON placed at Bunia from its text
+        merged = be.merge(items, NOW)
+        n = next(e for e in merged if e['source'] == 'GDELT')
+        self.assertEqual(n['corroboration'], 1)
+        self.assertEqual(n['geo_precision'], 'point')                     # corroborated news lands on the stated city
+        self.assertTrue(all('_city' not in e and '_state' not in e for e in merged))
+        self.assertAlmostEqual(n['lat'], 1.559, places=2)
+        pa = next(e for e in merged if e['source'] == 'Google News')
+        self.assertEqual(pa['geo_precision'], 'admin1')                   # state named by the curator, corroborated by NNDSS
+        self.assertTrue(100 < pa['geo_radius_km'] < 500)
+        self.assertNotIn('_city', n)
+        # second call hits the cache: no model call needed
+        r2 = llm.enrich(['Unknown illness: 12 new cases in Bunia'], call=lambda b: (_ for _ in ()).throw(AssertionError('should be cached')))
+        self.assertEqual(r2['Unknown illness: 12 new cases in Bunia']['pathogen'], 'ebola')

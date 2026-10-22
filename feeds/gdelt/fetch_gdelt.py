@@ -31,6 +31,7 @@ QUERIES = [
     ('theme:TAX_DISEASE_EPIDEMIC', 'epidemic-theme'),
     ('(dengue OR chikungunya OR "yellow fever" OR salmonella OR listeria OR "E. coli" OR "health emergency" OR "disease outbreak")', 'other'),
     ('theme:HEALTH_PANDEMIC', 'pandemic-theme'),
+    ('theme:TAX_DISEASE_OUTBREAK', 'outbreak-theme-translingual'),      # no English filter: other languages for the LLM stage
 ]
 QUERIES_PER_RUN = 3
 SPACING_S = 12
@@ -38,8 +39,9 @@ KEEP_HOURS = 48
 MAX_ARTICLES = 800
 
 
-def url_for(q: str) -> str:
-    return (f'https://api.gdeltproject.org/api/v2/doc/doc?query={quote(q + " sourcelang:english")}'
+def url_for(q: str, label: str = '') -> str:
+    lang = '' if label.endswith('translingual') else ' sourcelang:english'
+    return (f'https://api.gdeltproject.org/api/v2/doc/doc?query={quote(q + lang)}'
             f'&mode=artlist&maxrecords=250&format=json&timespan=24h&sort=datedesc')
 
 
@@ -94,7 +96,7 @@ def main():
             time.sleep(SPACING_S)
         t0 = time.time()
         try:
-            data = get_json(url_for(q), timeout=60, retries=1, backoff=20, rate_limit_sleep=30)
+            data = get_json(url_for(q, label), timeout=60, retries=1, backoff=20, rate_limit_sleep=30)
             ok += 1
         except HFError as e:
             log(f'  {label}: {e} after {time.time() - t0:.1f}s')

@@ -42,6 +42,8 @@ FEEDS = {
     # ── news ───────────────────────────────────────────────────────────────────
     'gdelt':     {'code': ['gdelt', '_shared'], 'run': [['python3', 'fetch_gdelt.py']],
                   'every': 1800, 'timeout': 900},
+    'gnews':     {'code': ['gnews', '_shared'], 'run': [['python3', 'fetch_gnews.py']],
+                  'every': 1800, 'timeout': 600},
 
     # ── the merge: every feed above → one HealthEvent list ─────────────────────
     # Runs in work/extract/ and reads its siblings' data/ directories (../<feed>/data),
