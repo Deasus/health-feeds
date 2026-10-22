@@ -1,0 +1,2 @@
+# stdlib only on purpose: the fetchers use urllib, json, csv and xml.etree so the
+# local run and the GitHub runner behave identically. Keep this file for the workflow.
