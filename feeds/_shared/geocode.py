@@ -14,7 +14,14 @@ import re
 from centroids import COUNTRIES, STATES
 
 _C = {}          # iso2 -> dict
+# Natural Earth lists some disputed/unrecognised territories under their parent's ISO code; they must not
+# overwrite the parent (Somaliland came after Somalia and took 'SO').
+_SHADOWED = {'Somaliland', 'N. Cyprus', 'Siachen Glacier', 'Indian Ocean Ter.'}
 for name, iso2, continent, subregion, lat, lng, bb in COUNTRIES:
+    if name in _SHADOWED and iso2 in _C:
+        continue
+    if name in _SHADOWED:
+        continue
     _C[iso2] = {'name': name, 'iso2': iso2, 'continent': continent, 'subregion': subregion,
                 'lat': lat, 'lng': lng, 'bbox': bb}
 _C['US']['name'] = 'United States'

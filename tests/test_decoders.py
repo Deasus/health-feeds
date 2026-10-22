@@ -52,6 +52,8 @@ class GeocodeTests(unittest.TestCase):
         self.assertEqual(geocode.area_of('SA'), 'middleEast')
         self.assertEqual(geocode.area_of('KE'), 'africa')
         self.assertEqual(geocode.area_of('US'), 'unitedStates')
+        self.assertEqual(geocode.country('SO')['name'], 'Somalia')          # not Somaliland, which shares the code in Natural Earth
+        self.assertEqual(geocode.country('CY')['name'], 'Cyprus')
 
 
 class PathogenTests(unittest.TestCase):
