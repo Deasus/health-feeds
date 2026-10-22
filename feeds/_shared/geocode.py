@@ -68,6 +68,33 @@ ALIASES = {
     'reunion': 'RE', 'la réunion': 'RE', 'la reunion': 'RE',
 }
 
+# The State Department's RSS "Country-Tag" is FIPS 10-4, not ISO 3166 (China is CH, Switzerland SZ, Germany GM,
+# Japan JA, the UK UK…). Only the codes that differ from ISO are listed; identical ones pass through.
+FIPS_TO_ISO = {
+    'AA': 'AW', 'AC': 'AG', 'AG': 'DZ', 'AJ': 'AZ', 'AN': 'AD', 'AQ': 'AS', 'AS': 'AU', 'AU': 'AT', 'AV': 'AI', 'AY': 'AQ',
+    'BA': 'BH', 'BC': 'BW', 'BD': 'BM', 'BF': 'BS', 'BG': 'BD', 'BH': 'BZ', 'BK': 'BA', 'BL': 'BO', 'BM': 'MM', 'BN': 'BJ',
+    'BO': 'BY', 'BP': 'SB', 'BU': 'BG', 'BX': 'BN', 'CB': 'KH', 'CD': 'TD', 'CE': 'LK', 'CF': 'CG', 'CG': 'CD', 'CH': 'CN',
+    'CI': 'CL', 'CJ': 'KY', 'CK': 'CC', 'CN': 'KM', 'CQ': 'MP', 'CS': 'CR', 'CT': 'CF', 'CW': 'CK', 'DA': 'DK', 'DO': 'DM',
+    'DR': 'DO', 'EI': 'IE', 'EK': 'GQ', 'EN': 'EE', 'ES': 'SV', 'EZ': 'CZ', 'FG': 'GF', 'FP': 'PF', 'GA': 'GM', 'GB': 'GA',
+    'GG': 'GE', 'GJ': 'GD', 'GK': 'GG', 'GM': 'DE', 'GQ': 'GU', 'GV': 'GN', 'HA': 'HT', 'HO': 'HN', 'IC': 'IS', 'IS': 'IL',
+    'IV': 'CI', 'IZ': 'IQ', 'JA': 'JP', 'KN': 'KP', 'KR': 'KI', 'KS': 'KR', 'KU': 'KW', 'KV': 'XK', 'LE': 'LB', 'LG': 'LV',
+    'LH': 'LT', 'LI': 'LR', 'LO': 'SK', 'LS': 'LI', 'MA': 'MG', 'MB': 'MQ', 'MC': 'MO', 'MF': 'YT', 'MG': 'MN', 'MH': 'MS',
+    'MI': 'MW', 'MJ': 'ME', 'MN': 'MC', 'MO': 'MA', 'MP': 'MU', 'MU': 'OM', 'NG': 'NE', 'NH': 'VU', 'NI': 'NG', 'NN': 'SX',
+    'NS': 'SR', 'NU': 'NI', 'PA': 'PY', 'PC': 'PN', 'PM': 'PA', 'PO': 'PT', 'PP': 'PG', 'PS': 'PW', 'PU': 'GW', 'RB': 'RS',
+    'RM': 'MH', 'RP': 'PH', 'RQ': 'PR', 'RS': 'RU', 'SB': 'PM', 'SC': 'KN', 'SE': 'SC', 'SF': 'ZA', 'SG': 'SN', 'SN': 'SG',
+    'SP': 'ES', 'ST': 'LC', 'SU': 'SD', 'SW': 'SE', 'SZ': 'CH', 'TB': 'BL', 'TD': 'TT', 'TI': 'TJ', 'TK': 'TC', 'TL': 'TK',
+    'TN': 'TO', 'TO': 'TG', 'TP': 'ST', 'TS': 'TN', 'TT': 'TL', 'TU': 'TR', 'TX': 'TM', 'UK': 'GB', 'UP': 'UA', 'VI': 'VG',
+    'VM': 'VN', 'VQ': 'VI', 'WA': 'NA', 'WE': 'PS', 'WI': 'EH', 'WZ': 'SZ', 'ZA': 'ZM', 'ZI': 'ZW',
+}
+
+
+def country_from_fips(code: str):
+    if not code:
+        return None
+    c = code.strip().upper()
+    return country(FIPS_TO_ISO.get(c, c))
+
+
 ISO3 = {
     'AFG': 'AF', 'ALB': 'AL', 'DZA': 'DZ', 'ASM': 'AS', 'AND': 'AD', 'AGO': 'AO', 'AIA': 'AI', 'ATA': 'AQ', 'ATG': 'AG', 'ARG': 'AR', 'ARM': 'AM',
     'ABW': 'AW', 'AUS': 'AU', 'AUT': 'AT', 'AZE': 'AZ', 'BHS': 'BS', 'BHR': 'BH', 'BGD': 'BD', 'BRB': 'BB', 'BLR': 'BY', 'BEL': 'BE', 'BLZ': 'BZ',
@@ -166,6 +193,18 @@ def find_countries(text: str) -> list:
     return out
 
 
+def radius_km(bbox):
+    """Half the diagonal of a [minLng, minLat, maxLng, maxLat] box, in km: how far a centroid may be from the truth."""
+    if not bbox:
+        return None
+    import math
+    min_lng, min_lat, max_lng, max_lat = bbox
+    mid_lat = math.radians((min_lat + max_lat) / 2)
+    dx = (max_lng - min_lng) * 111.32 * math.cos(mid_lat)
+    dy = (max_lat - min_lat) * 110.57
+    return round(min(math.hypot(dx, dy) / 2, 2500), 0)
+
+
 def area_of(iso2: str, lng=None) -> str:
     """CINDER's Area for a country (Area.of in CinderKit)."""
     c = _C.get(iso2)
@@ -196,8 +235,8 @@ def area_of(iso2: str, lng=None) -> str:
 # ── US / CA / AU states and provinces ──────────────────────────────────────────
 
 _STATES = {}
-for name, code, k, lat, lng in STATES:
-    _STATES[(k, code)] = {'name': name, 'code': code, 'country': k, 'lat': lat, 'lng': lng}
+for name, code, k, lat, lng, bb in STATES:
+    _STATES[(k, code)] = {'name': name, 'code': code, 'country': k, 'lat': lat, 'lng': lng, 'bbox': bb}
 _STATE_BY_NAME = {(k, s['name'].lower()): s for (k, _), s in _STATES.items()}
 _STATE_BY_NAME[('US', 'washington, d.c.')] = _STATES.get(('US', 'DC'))
 _STATE_BY_NAME[('US', 'washington dc')] = _STATES.get(('US', 'DC'))

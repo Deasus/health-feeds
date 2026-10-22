@@ -11,6 +11,7 @@ high (m1 >= 3 and m1 > m2). Chronic-hepatitis labels are skipped (reporting arte
 The full state table for the week (rows with m1 > 0) ships alongside for the app's tables.
 """
 import os
+from datetime import datetime, timedelta, timezone
 from hf import get_json, write_if_changed, envelope, log, fail, HFError, now
 import events, geocode, pathogens
 
@@ -39,6 +40,13 @@ def latest_week():
 def fetch_week(year, week):
     url = (f"{BASE}?$select=states,label,m1,m2,m3,m4,geocode&$where=year='{year}'%20AND%20week={week}&$limit=50000")
     return get_json(url, headers=headers(), timeout=120)
+
+
+def mmwr_week_end(year, week):
+    """Saturday ending MMWR week `week`: week 1 is the first Sunday–Saturday week with at least four days in January."""
+    jan4 = datetime(int(year), 1, 4, tzinfo=timezone.utc)
+    first_saturday = jan4 + timedelta(days=(5 - jan4.weekday()) % 7)
+    return first_saturday + timedelta(weeks=int(week) - 1)
 
 
 def place(name):
@@ -93,7 +101,8 @@ def decode(rows, year, week, fetched_at):
             source='CDC NNDSS', source_tier='official', kind='surveillance', severity=severity, title=title, headline=headline,
             pathogen=pathogen, country_code=cc, admin1=admin1, admin1_code=code,
             lat=geo[1] if geo else None, lng=geo[0] if geo else None, geo_precision='admin1' if geo or code else 'country',
-            cases=int(m1), updated=fetched_at, url=PAGE, facts=facts, credit=CREDIT, licence=LICENCE,
+            cases=int(m1), updated=mmwr_week_end(year, week), onset=mmwr_week_end(year, week) - timedelta(days=6),
+            url=PAGE, facts=facts, credit=CREDIT, licence=LICENCE,
             tags=['new-52-week-high'], source_id=f'{year}-W{week}|{loc}|{label}'))
     return items, table
 

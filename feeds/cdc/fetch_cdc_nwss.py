@@ -104,7 +104,7 @@ def to_events(slug, per_site, by_state, fetched_at):
                 headline=f'A sewershed serving about {s["population"]:,} people had a detection in the 14 days to {s["latest"]}.' if s['population']
                          else f'Detection in the 14 days to {s["latest"]}.',
                 pathogen=p, country_code='US', admin1=st['name'] if st else s['state'], admin1_code=st['code'] if st else None,
-                area=where, updated=fetched_at, onset=parse_date(s['latest']), url='https://data.cdc.gov/d/' + [k for k, v in DATASETS.items() if v == slug][0],
+                area=where, updated=parse_date(s['latest']), onset=parse_date(s['latest']), url='https://data.cdc.gov/d/' + [k for k, v in DATASETS.items() if v == slug][0],
                 facts=[['Latest sample', s['latest']], ['County', s['county'] or '—'], ['Population served', f'{s["population"]:,}' if s['population'] else '—'],
                        ['Trend', s['trend']]], credit=CREDIT, licence=LICENCE, tags=['wastewater-detection'],
                 source_id=f'{slug}|{s["state"]}|{s["site"]}|{s["latest"]}'))
@@ -117,7 +117,7 @@ def to_events(slug, per_site, by_state, fetched_at):
                     title=f'{p["name"]} rising in wastewater across {st["name"] if st else st_code}',
                     headline=f'{b["rising"]} of {b["sites"]} sewersheds show rising concentrations; latest samples {b["latest"]}.',
                     pathogen=p, country_code='US', admin1=st['name'] if st else st_code, admin1_code=st['code'] if st else None,
-                    updated=fetched_at, url='https://data.cdc.gov/d/' + [k for k, v in DATASETS.items() if v == slug][0],
+                    updated=parse_date(b['latest']), url='https://data.cdc.gov/d/' + [k for k, v in DATASETS.items() if v == slug][0],
                     facts=[['Sites', str(b['sites'])], ['Rising', f'{b["rising_pct"]}%'], ['Detecting', f'{b["detecting_pct"]}%'], ['Latest', b['latest']]],
                     credit=CREDIT, licence=LICENCE, tags=['wastewater-trend'], source_id=f'{slug}|{st_code}|{b["latest"]}|rising'))
     return out

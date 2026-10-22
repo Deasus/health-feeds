@@ -43,12 +43,10 @@ def decode(root):
             reasons = reasons[1:]
         text = strip_html(html_desc)
         health = any(HEALTH.search(r) for r in reasons)
-        c = geocode.country(iso2) if iso2 else None
-        if c is None:
-            cs = geocode.find_countries(country_name)
-            c = cs[0] if cs else None
+        cs = geocode.find_countries(country_name)                     # the title names the country
+        c = cs[0] if cs else geocode.country_from_fips(iso2)           # the tag is FIPS 10-4, not ISO
         published = parse_date(it['pubDate'])
-        adv = {'country': country_name, 'iso2': c['iso2'] if c else iso2, 'level': level, 'title': title,
+        adv = {'country': country_name, 'iso2': c['iso2'] if c else None, 'fips': iso2, 'level': level, 'title': title,
                'reasons': reasons, 'health': health, 'updated': published.strftime('%Y-%m-%d') if published else None,
                'url': it['link'] or it['guid']}
         advisories.append(adv)

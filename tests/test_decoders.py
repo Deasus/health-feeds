@@ -228,3 +228,35 @@ class ExtractTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class StateDeptCodeTests(unittest.TestCase):
+    def test_fips_tag_is_not_iso(self):
+        mod = importlib.import_module('fetch_state')
+        import html as _html
+        desc = _html.escape('Exercise increased caution<p>in <b>China</b> due to <b>health</b> risks.</p>')   # the feed escapes its HTML
+        rss = ('<rss><channel><item><title>China - Level 2: Exercise Increased Caution</title><link>https://x/china</link>'
+               f'<description>{desc}</description>'
+               '<category domain="Threat-Level">Level 2: Exercise Increased Caution</category>'
+               '<category domain="Country-Tag">CH</category><guid>https://x/china</guid></item></channel></rss>')
+        advisories, items = mod.decode(ET.fromstring(rss))
+        self.assertEqual(advisories[0]['iso2'], 'CN')                   # CH is FIPS for China, not Switzerland
+        self.assertEqual(items[0]['country_code'], 'CN')
+        self.assertEqual(geocode.country_from_fips('SZ')['iso2'], 'CH')  # and FIPS SZ is Switzerland
+
+
+class RadiusAndDatesTests(unittest.TestCase):
+    def test_radius(self):
+        ev = events.make(source='WHO DON', source_tier='official', kind='outbreak', title='Ebola - DRC', updated=NOW, pathogen='ebola', country_code='CD', source_id='r1')
+        self.assertGreater(ev['geo_radius_km'], 800)
+        mi = events.make(source='CDC NWSS', source_tier='official', kind='surveillance', title='x', updated=NOW, pathogen='measles',
+                         country_code='US', admin1='Michigan', admin1_code='MI', source_id='r2')
+        self.assertTrue(100 < mi['geo_radius_km'] < 500)
+        pt = events.make(source='CDC NNDSS', source_tier='official', kind='surveillance', title='x', updated=NOW, pathogen='measles',
+                         lat=42.7, lng=-84.5, source_id='r3')
+        self.assertEqual(pt['geo_radius_km'], 0.0)
+
+    def test_mmwr_week_end(self):
+        mod = importlib.import_module('fetch_cdc_nndss')
+        self.assertEqual(mod.mmwr_week_end('2026', 41).strftime('%Y-%m-%d %a'), '2026-10-17 Sat')   # 2026 week 1 ends 10 Jan
+        self.assertEqual(mod.mmwr_week_end('2026', 1).strftime('%Y-%m-%d %a'), '2026-01-10 Sat')

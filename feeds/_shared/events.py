@@ -19,6 +19,17 @@ INFO, MINOR, MODERATE, SEVERE, EXTREME = 0, 1, 2, 3, 4
 SEVERITY_LABEL = ['INFO', 'MINOR', 'MODERATE', 'SEVERE', 'EXTREME']
 
 
+def _radius(precision, country_code, admin1_code):
+    """How far from the drawn point the truth may lie: half the state's or country's bounding-box diagonal."""
+    if precision == 'admin1' and admin1_code and country_code in ('US', 'CA', 'AU'):
+        s = geocode.state(admin1_code, country_code)
+        return geocode.radius_km(s['bbox']) if s else None
+    if precision in ('country', 'admin1') and country_code:
+        c = geocode.country(country_code)
+        return geocode.radius_km(c.get('bbox')) if c else None
+    return 0.0 if precision == 'point' else None
+
+
 def make(*, source, source_tier, kind, title, updated, pathogen=None, severity=INFO, headline=None, body=None,
          instruction=None, area=None, country_code=None, admin1=None, admin1_code=None, lat=None, lng=None,
          geo_precision=None, cases=None, deaths=None, cases_quote=None, onset=None, expires=None, url=None,
@@ -69,6 +80,7 @@ def make(*, source, source_tier, kind, title, updated, pathogen=None, severity=I
         'lat': lat,
         'lng': lng,
         'geo_precision': geo_precision if lat is not None else 'none',
+        'geo_radius_km': _radius(geo_precision if lat is not None else 'none', country_code, admin1_code),
         'region': geocode.area_of(country_code, lng) if country_code else 'global',
         'cases': cases,
         'deaths': deaths,
