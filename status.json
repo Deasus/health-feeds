@@ -1,0 +1,126 @@
+{
+ "feeds": {
+  "cdc": {
+   "duration_s": 10.2,
+   "last_end": "2026-10-24T20:26:20Z",
+   "last_ok": "2026-10-24T20:26:20Z",
+   "last_published": "2026-10-24T00:25:21Z",
+   "last_start": "2026-10-24T20:26:10Z",
+   "last_start_ts": 1792873570.775284,
+   "last_tail": "",
+   "ok": true,
+   "publish_error": null,
+   "running": false,
+   "runs": 52
+  },
+  "ecdc": {
+   "duration_s": 0.4,
+   "last_end": "2026-10-24T16:18:35Z",
+   "last_ok": "2026-10-24T16:18:35Z",
+   "last_published": "2026-10-22T22:18:15Z",
+   "last_start": "2026-10-24T16:18:35Z",
+   "last_start_ts": 1792858715.2665048,
+   "last_tail": "",
+   "ok": true,
+   "publish_error": null,
+   "running": false,
+   "runs": 9
+  },
+  "extract": {
+   "duration_s": 5.1,
+   "last_end": "2026-10-24T20:59:38Z",
+   "last_ok": "2026-10-24T20:59:38Z",
+   "last_published": "2026-10-24T20:59:38Z",
+   "last_start": "2026-10-24T20:59:33Z",
+   "last_start_ts": 1792875573.1049902,
+   "last_tail": "",
+   "ok": true,
+   "publish_error": null,
+   "running": false,
+   "runs": 207
+  },
+  "fda": {
+   "duration_s": 0.8,
+   "last_end": "2026-10-24T16:18:36Z",
+   "last_ok": "2026-10-24T16:18:36Z",
+   "last_published": "2026-10-22T22:18:17Z",
+   "last_start": "2026-10-24T16:18:35Z",
+   "last_start_ts": 1792858715.266801,
+   "last_tail": "",
+   "ok": true,
+   "publish_error": null,
+   "running": false,
+   "runs": 9
+  },
+  "gdelt": {
+   "duration_s": 150.0,
+   "last_end": "2026-10-24T21:00:18Z",
+   "last_ok": "2026-10-24T21:00:18Z",
+   "last_published": "2026-10-24T21:00:18Z",
+   "last_start": "2026-10-24T20:57:48Z",
+   "last_start_ts": 1792875468.1013474,
+   "last_tail": "",
+   "ok": true,
+   "publish_error": null,
+   "running": false,
+   "runs": 104
+  },
+  "gnews": {
+   "duration_s": 51.0,
+   "last_end": "2026-10-24T20:52:52Z",
+   "last_ok": "2026-10-24T20:52:52Z",
+   "last_published": "2026-10-24T20:52:52Z",
+   "last_start": "2026-10-24T20:52:01Z",
+   "last_start_ts": 1792875121.9608219,
+   "last_tail": "",
+   "ok": true,
+   "publish_error": null,
+   "running": false,
+   "runs": 94
+  },
+  "hdx": {
+   "duration_s": 16.8,
+   "last_end": "2026-10-24T16:18:52Z",
+   "last_ok": "2026-10-24T16:18:52Z",
+   "last_published": "2026-10-24T16:18:52Z",
+   "last_start": "2026-10-24T16:18:35Z",
+   "last_start_ts": 1792858715.2670887,
+   "last_tail": "",
+   "ok": true,
+   "publish_error": null,
+   "running": false,
+   "runs": 9
+  },
+  "reliefweb": {
+   "running": false,
+   "skipped": "missing RELIEFWEB_APPNAME"
+  },
+  "travel": {
+   "duration_s": 0.7,
+   "last_end": "2026-10-24T20:26:11Z",
+   "last_ok": "2026-10-24T20:26:11Z",
+   "last_published": "2026-10-24T06:25:21Z",
+   "last_start": "2026-10-24T20:26:10Z",
+   "last_start_ts": 1792873570.7755,
+   "last_tail": "",
+   "ok": true,
+   "publish_error": null,
+   "running": false,
+   "runs": 52
+  },
+  "who": {
+   "duration_s": 1.1,
+   "last_end": "2026-10-24T20:56:59Z",
+   "last_ok": "2026-10-24T20:56:59Z",
+   "last_published": "2026-10-23T17:24:45Z",
+   "last_start": "2026-10-24T20:56:58Z",
+   "last_start_ts": 1792875418.0997493,
+   "last_tail": "",
+   "ok": true,
+   "publish_error": null,
+   "running": false,
+   "runs": 104
+  }
+ },
+ "generated_at": "2026-10-24T21:06:14Z"
+}
