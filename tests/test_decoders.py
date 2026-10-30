@@ -2,6 +2,7 @@
 import importlib
 import json
 import os
+import re
 import sys
 import unittest
 import xml.etree.ElementTree as ET
@@ -10,7 +11,7 @@ from datetime import datetime, timezone, timedelta
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FEEDS = os.path.join(ROOT, 'feeds')
 FIX = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures')
-for d in ['_shared', 'who', 'cdc', 'travel', 'ecdc', 'hdx', 'gdelt', 'gnews', 'fda', 'reliefweb', 'extract']:
+for d in ['_shared', 'who', 'cdc', 'travel', 'ecdc', 'hdx', 'gdelt', 'gnews', 'fda', 'reliefweb', 'paho', 'wahis', 'aphis', 'whispers', 'extract']:
     sys.path.insert(0, os.path.join(FEEDS, d))
 os.environ['HF_OFFLINE'] = '1'
 
@@ -342,3 +343,129 @@ class CuratorTests(unittest.TestCase):
         # second call hits the cache: no model call needed
         r2 = llm.enrich(['Unknown illness: 12 new cases in Bunia'], call=lambda b: (_ for _ in ()).throw(AssertionError('should be cached')))
         self.assertEqual(r2['Unknown illness: 12 new cases in Bunia']['pathogen'], 'ebola')
+
+
+# ── 2026-10-30: the HealthMap delta (PLAN §11) ─────────────────────────────────
+
+class WAHISTests(unittest.TestCase):
+    def test_decode(self):
+        mod = importlib.import_module('fetch_wahis')
+        lst = load_json('wahis_list.json')['list']
+        rep = load_json('wahis_report.json')                       # Germany, HPAI in poultry, immediate notification
+        reports = {str(rep['report']['reportId']): mod.compact(rep)}
+        germany = dict(lst[0])
+        germany.update(reportId=rep['report']['reportId'], eventId=rep['event']['eventId'], country='Germany', reportType='IN',
+                       reportNumber=0, disease=rep['event']['disease']['name'], submissionDate=rep['report']['reportedOn'])
+        evs = mod.decode([germany] + lst, reports, datetime(2026, 10, 30, 12, tzinfo=timezone.utc))
+        self.assertTrue(evs and all('animal' in e['tags'] and e['source'] == 'WOAH WAHIS' and e['cases'] is None for e in evs))
+        self.assertFalse(any(re.search(r'lumpy|swine|typhoid', e['title'], re.I) for e in evs))     # animal-only diseases and fowl typhoid stay out
+        de = [e for e in evs if e['country_code'] == 'DE'][0]
+        self.assertEqual((de['pathogen'], de['severity_label']), ('h5n1', 'MINOR'))
+        # two farms ~190 km apart: the point is their midpoint, the ring covers both, so the precision drops to admin1
+        self.assertEqual(de['geo_precision'], 'point' if de['geo_radius_km'] <= 60 else 'admin1')
+        self.assertTrue(53.0 < de['lat'] < 55.0 and de['geo_radius_km'] >= 10)
+        self.assertTrue('Immediate notification' in de['headline'] and 'poultry' in de['title'] and '2 outbreaks' in de['headline'])
+        self.assertTrue(any(e['pathogen'] == 'screwworm' and e['country_code'] == 'US' for e in evs))
+        self.assertTrue(any(e['pathogen'] == 'west_nile' and e['country_code'] == 'BE' for e in evs))
+        self.assertTrue(any(e['pathogen'] == 'anthrax' and e['country_code'] == 'GR' for e in evs))
+        lv = [e for e in evs if e['country_code'] == 'LV' and e['pathogen'] == 'h5n1']
+        self.assertTrue(lv and all(e['geo_precision'] == 'country' for e in lv))     # no detail cached yet → country centroid
+        self.assertIsNone(mod.pathogen_for('Fowl typhoid'))
+        self.assertIsNone(mod.pathogen_for('African swine fever virus (Inf. with)'))
+        self.assertEqual(mod.pathogen_for('Influenza A viruses of high pathogenicity (Inf. with) (non-poultry including wild birds) (2017-)')['slug'], 'h5n1')
+
+
+class APHISTests(unittest.TestCase):
+    def test_decode(self):
+        mod = importlib.import_module('fetch_aphis')
+        ref = datetime(2026, 10, 28, tzinfo=timezone.utc)
+        with open(fixture('aphis_wild_birds.csv'), encoding='utf-8') as f:
+            wild = mod.decode('wild_birds', mod.rows_of(f.read()), ref)
+        self.assertGreater(len(wild), 20)
+        self.assertTrue(all(e['pathogen'] == 'h5n1' and e['country_code'] == 'US' and 'wild-bird' in e['tags'] and e['cases'] is None for e in wild))
+        pts = [e for e in wild if e['geo_precision'] == 'point']
+        self.assertGreater(len(pts) / len(wild), 0.9)                 # nearly every county resolves in the Census gazetteer
+        self.assertTrue(all(e['geo_radius_km'] and e['geo_radius_km'] > 0 and e['admin1_code'] for e in pts))
+        self.assertTrue(all(int(e['facts'][0][1]) >= 1 for e in wild))
+        with open(fixture('aphis_mammals.csv'), encoding='utf-8') as f:
+            rows = mod.rows_of(f.read())
+        mam = mod.decode('mammals', rows, ref)
+        self.assertTrue(mam and all('mammal' in e['tags'] and e['title'].startswith('HPAI in mammals: ') for e in mam))
+        self.assertEqual(mod.decode('mammals', rows, datetime(2027, 6, 1, tzinfo=timezone.utc)), [])     # nothing in the window
+
+
+class WHISPersTests(unittest.TestCase):
+    def test_decode(self):
+        mod = importlib.import_module('fetch_whispers')
+        res = load_json('whispers_events.json')['results']
+        evs = mod.decode(res, datetime(2026, 10, 30, tzinfo=timezone.utc))
+        ids = {e['url'].rsplit('/', 1)[1] for e in evs}
+        self.assertIn('205473', ids)            # HPAI suspect, Calumet County WI
+        self.assertIn('205497', ids)            # 409 coots and teal, diagnosis pending → undiagnosed die-off
+        self.assertNotIn('205304', ids)         # duck plague: wildlife-only (and older than the window)
+        self.assertNotIn('15312', ids)          # no start date
+        self.assertNotIn('205437', ids)         # West Nile on 19 Aug: outside 45 days of 30 Oct
+        hp = [e for e in evs if e['url'].endswith('/205473')][0]
+        self.assertEqual((hp['pathogen'], hp['severity_label'], hp['geo_precision'], hp['source']), ('h5n1', 'MINOR', 'point', 'USGS WHISPers'))
+        self.assertTrue('suspect' in hp['tags'] and 'Calumet County' in hp['area'] and hp['geo_radius_km'] > 0 and hp['cases'] is None)
+        die = [e for e in evs if e['url'].endswith('/205497')][0]
+        self.assertEqual(die['pathogen'], 'unknown')
+        self.assertTrue('undiagnosed' in die['tags'] and die['severity_label'] == 'INFO' and die['title'].startswith('Wildlife die-off'))
+        self.assertIn(die['geo_precision'], ('point', 'admin1'))
+        wnv = [e for e in mod.decode(res, datetime(2026, 9, 20, tzinfo=timezone.utc)) if e['pathogen'] == 'west_nile']
+        self.assertTrue(wnv and wnv[0]['country_code'] == 'US')
+
+
+class PAHOTests(unittest.TestCase):
+    def test_decode(self):
+        mod = importlib.import_module('fetch_paho')
+        with open(fixture('paho_alerts.html'), encoding='utf-8') as f:
+            evs = mod.decode(f.read())
+        self.assertGreaterEqual(len(evs), 10)
+        my = [e for e in evs if 'Myiasis' in e['title']][0]
+        self.assertEqual((my['pathogen'], my['severity_label'], my['kind'], my['source']), ('screwworm', 'MODERATE', 'alert', 'PAHO'))
+        self.assertTrue('regional' in my['tags'] and my['lat'] is None and my['updated'].startswith('2026-10-16'))
+        eb = [e for e in evs if 'Bundibugyo' in e['title'] and e['country_code'] == 'CD']
+        self.assertTrue(eb and eb[0]['pathogen'] == 'ebola' and eb[0]['lat'] is not None)
+        self.assertTrue(all(e['body'] is None for e in evs))                     # no PAHO text is reproduced
+        upd = [e for e in evs if e['facts'][0][1] == 'Epidemiological Update']
+        self.assertTrue(upd and all(e['severity_label'] == 'MINOR' for e in upd))
+
+
+class WHOArchiveTests(unittest.TestCase):
+    def test_compact(self):
+        mod = importlib.import_module('fetch_who_archive')
+        rows = [mod.compact(v) for v in load_json('who_archive_page.json')['value']]
+        self.assertEqual(len(rows), 100)
+        self.assertEqual(len({r['id'] for r in rows}), 100)              # UrlName is the identity; DonId repeats across migrated notices
+        self.assertTrue(all(r['id'] and r['title'] and r['date'] and r['url'].startswith('https://www.who.int/') for r in rows))
+        self.assertGreater(sum(1 for r in rows if r['pathogen']), 80)
+        self.assertGreater(sum(1 for r in rows if r['countries']), 70)
+        self.assertTrue(all('summary' not in r and 'body' not in r for r in rows))
+
+
+class MultilingualNewsTests(unittest.TestCase):
+    def test_spanish_headlines_become_events(self):
+        mod = importlib.import_module('fetch_gnews')
+        root = ET.parse(fixture('gnews_es.xml')).getroot()
+        rows = []
+        for it in hf.rss_items(root):
+            outlet = it['extra'].get('source') or ''
+            rows.append({'title': mod.clean_title(it['title'], outlet), 'url': it['link'], 'domain': outlet, 'seendate': it['pubDate'],
+                         '_q': ['brote sarampión'], '_lang': 'Spanish'})
+        evs, out = mod.decode(rows, NOW)
+        self.assertEqual(len(out), 12)
+        self.assertTrue(all(r['language'] == 'Spanish' for r in out))
+        self.assertTrue(evs and {e['pathogen'] for e in evs} & {'measles', 'dengue', 'cholera'})
+        self.assertTrue(all('lang:spanish' in e['tags'] and e['lat'] is None and e['facts'][1] == ['Language', 'Spanish'] for e in evs))
+
+    def test_aliases(self):
+        cases = {'تفشي الكوليرا في السودان': 'cholera', '麻疹疫情爆发 北京': 'measles', 'вспышка кори в Москве': 'measles',
+                 'Surto de dengue em São Paulo': 'dengue', 'Épidémie de choléra au Tchad': 'cholera', 'wabah campak di Jawa': 'measles',
+                 'Gusano barrenador: nuevo caso en Nuevo León': 'screwworm', 'الحصبة الألمانية': 'rubella', '德国麻疹 病例': 'rubella',
+                 'Crimean Congo haemorrhagic fever': 'cchf', 'Highly Pathogenic Avian Influenza (AI virus H5N1) suspect': 'h5n1'}
+        for text, slug in cases.items():
+            self.assertEqual(pathogens.primary(text)['slug'], slug, text)
+        self.assertTrue(pathogens.is_outbreak_language('疫情 爆发') and pathogens.is_outbreak_language('brote de dengue'))
+        self.assertTrue(pathogens.is_outbreak_language('тысячи случаев заболевания'))
+        self.assertFalse(pathogens.is_outbreak_language('new hospital opens'))

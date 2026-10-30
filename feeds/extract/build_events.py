@@ -25,6 +25,7 @@ SOURCES = [
     ('who', 'don.json'), ('cdc', 'travel_notices.json'), ('cdc', 'nndss.json'), ('cdc', 'nwss.json'),
     ('travel', 'state.json'), ('ecdc', 'cdtr.json'), ('hdx', 'datasets.json'), ('fda', 'recalls.json'),
     ('reliefweb', 'disasters.json'), ('gdelt', 'articles.json'), ('gnews', 'articles.json'),
+    ('paho', 'alerts.json'), ('wahis', 'events.json'), ('aphis', 'hpai.json'), ('whispers', 'events.json'),
 ]
 WINDOW_DAYS = 45
 CORROBORATION_DAYS = 21
@@ -123,6 +124,8 @@ def merge(items, ref):
     for ev in kept:
         if ev['source_tier'] == 'news' or ev['pathogen'] == 'unknown' or not ev.get('country_code'):
             continue
+        if 'animal' in (ev.get('tags') or []) and ev['pathogen'] != 'h5n1':
+            continue            # an animal rabies or anthrax report is its own layer; only HPAI in animals corroborates "bird flu" headlines
         key = (ev['pathogen'], ev['country_code'])
         index[key].add(ev['source'])
         stamps[key].append(parse_date(ev.get('updated')) or ref)

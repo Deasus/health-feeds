@@ -16,13 +16,15 @@ ignore    patterns under data/ never published
 Cadences follow the upstream rhythm (research/sources-2026-10-22.md in ~/PULSE):
 WHO DON several a week, CDC travel notices per notice, State Dept per advisory,
 ECDC weekly, HDX per dataset, GDELT continuous (one request per 5 s), openFDA
-weekly, NNDSS weekly (Thursdays), NWSS weekly (Fridays), ReliefWeb per disaster.
+weekly, NNDSS weekly (Thursdays), NWSS weekly (Fridays), ReliefWeb per disaster,
+PAHO alerts a few a month, WAHIS notifications daily, APHIS CSVs weekly, WHISPers daily.
 """
 
 FEEDS = {
     # ── official, structured ───────────────────────────────────────────────────
-    'who':       {'code': ['who', '_shared'], 'run': [['python3', 'fetch_who.py']],
-                  'every': 1800, 'timeout': 300},
+    'who':       {'code': ['who', '_shared'], 'keep_going': True,
+                  'run': [['python3', 'fetch_who.py'], ['python3', 'fetch_who_archive.py']],
+                  'every': 1800, 'timeout': 600},
     'cdc':       {'code': ['cdc', '_shared'], 'keep_going': True,
                   'run': [['python3', 'fetch_cdc_travel.py'], ['python3', 'fetch_cdc_nndss.py'], ['python3', 'fetch_cdc_nwss.py']],
                   'every': 3600, 'timeout': 900, 'optional': ['SOCRATA_APP_TOKEN']},
@@ -32,6 +34,16 @@ FEEDS = {
                   'every': 21600, 'timeout': 300},
     'fda':       {'code': ['fda', '_shared'], 'run': [['python3', 'fetch_fda.py']],
                   'every': 21600, 'timeout': 300, 'optional': ['OPENFDA_API_KEY']},
+    'paho':      {'code': ['paho', '_shared'], 'run': [['python3', 'fetch_paho.py']],
+                  'every': 21600, 'timeout': 300},
+
+    # ── official, animal and wildlife health (2026-10-30, the HealthMap delta: PLAN §11) ──
+    'wahis':     {'code': ['wahis', '_shared'], 'run': [['python3', 'fetch_wahis.py']],
+                  'every': 3600, 'timeout': 900, 'optional': ['WAHIS_MAX_REPORT_FETCHES']},
+    'aphis':     {'code': ['aphis', '_shared'], 'run': [['python3', 'fetch_aphis.py']],
+                  'every': 21600, 'timeout': 600},
+    'whispers':  {'code': ['whispers', '_shared'], 'run': [['python3', 'fetch_whispers.py']],
+                  'every': 21600, 'timeout': 900},
 
     # ── aggregators ────────────────────────────────────────────────────────────
     'hdx':       {'code': ['hdx', '_shared'], 'run': [['python3', 'fetch_hdx.py']],

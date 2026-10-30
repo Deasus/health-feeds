@@ -92,6 +92,36 @@ def get_json(url: str, **kw):
         raise HFError(f'bad JSON from {url[:120]}: {str(e)[:80]}') from e
 
 
+def post_json(url: str, body, *, headers=None, timeout: int = 30, retries: int = 1, backoff: float = 5.0, ua: str = UA):
+    """POST a JSON body and decode a JSON reply (WAHIS's list endpoint). Retries on 5xx/network errors like get()."""
+    h = {'User-Agent': ua, 'Accept': 'application/json', 'Content-Type': 'application/json'}
+    h.update(headers or {})
+    data = json.dumps(body).encode('utf-8')
+    last = None
+    for attempt in range(retries + 1):
+        req = urllib.request.Request(url, data=data, headers=h, method='POST')
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                raw = r.read()
+            try:
+                return json.loads(raw.decode('utf-8', 'replace'))
+            except ValueError as e:
+                raise HFError(f'bad JSON from {url[:120]}: {str(e)[:80]}') from e
+        except urllib.error.HTTPError as e:
+            last = f'HTTP {e.code}'
+            if 500 <= e.code < 600 and attempt < retries:
+                time.sleep(backoff * (attempt + 1))
+                continue
+            raise HFError(f'{last} for {url[:120]}') from e
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
+            last = str(e)[:120]
+            if attempt < retries:
+                time.sleep(backoff * (attempt + 1))
+                continue
+            raise HFError(f'{last} for {url[:120]}') from e
+    raise HFError(f'{last} for {url[:120]}')
+
+
 def get_text(url: str, **kw) -> str:
     return get(url, **kw).decode('utf-8', 'replace')
 

@@ -283,3 +283,69 @@ def us_state_region(code: str) -> str:
     if code in midwest:
         return 'Midwest'
     return 'Northeast'
+
+
+# ── US counties (2026-10-30) ───────────────────────────────────────────────────
+# counties.json: US Census gazetteer centroids (tools/build_counties.py), for APHIS and WHISPers, which name a county and
+# a state and nothing finer. Keys are the name without its generic ("Autauga" for "Autauga County", "Orleans" for
+# "Orleans Parish"); Virginia's independent cities keep "city" ("Richmond city" beside "Richmond" the county).
+import json as _json
+import os as _os
+import unicodedata as _ud
+
+_COUNTIES = None
+
+
+def _county_key(name: str) -> str:
+    s = _ud.normalize('NFKD', name or '')
+    s = ''.join(ch for ch in s if not _ud.combining(ch)).lower().strip()
+    s = re.sub(r'\bst\.\s*', 'st ', s)
+    s = re.sub(r'\bsaint\s+', 'st ', s)
+    s = re.sub(r'\s+(county|parish|borough|census area|municipality|municipio|city and borough)$', '', s)
+    s = re.sub(r"[^a-z0-9' ]", ' ', s)
+    return re.sub(r'\s+', ' ', s).strip()
+
+
+def _counties():
+    global _COUNTIES
+    if _COUNTIES is None:
+        _COUNTIES = {}
+        path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'counties.json')
+        try:
+            with open(path, encoding='utf-8') as f:
+                table = _json.load(f)['counties']
+        except (OSError, ValueError, KeyError):
+            table = {}
+        for st, rows in table.items():
+            for name, fips, lat, lng, radius in rows:
+                rec = {'name': name, 'state': st, 'fips': fips, 'lat': lat, 'lng': lng, 'radius_km': radius}
+                _COUNTIES.setdefault((st, _county_key(name)), rec)
+    return _COUNTIES
+
+
+def county(name: str, state_code: str):
+    """A US county, parish, borough or census area by name and state code → {name, state, fips, lat, lng, radius_km} or None."""
+    if not name or not state_code:
+        return None
+    st = state_code.strip().upper()
+    if len(st) != 2:
+        s = state(state_code, 'US')
+        if not s:
+            return None
+        st = s['code']
+    table = _counties()
+    key = _county_key(name)
+    hit = table.get((st, key))
+    if hit is None and key.endswith(' city'):
+        hit = table.get((st, key[:-5]))
+    if hit is None:
+        hit = table.get((st, key + ' city'))
+    return hit
+
+
+def distance_km(a, b) -> float:
+    """Great-circle distance between (lat, lng) pairs, in km."""
+    import math
+    la1, lo1, la2, lo2 = map(math.radians, (a[0], a[1], b[0], b[1]))
+    h = math.sin((la2 - la1) / 2) ** 2 + math.cos(la1) * math.cos(la2) * math.sin((lo2 - lo1) / 2) ** 2
+    return 2 * 6371.0 * math.asin(math.sqrt(h))
