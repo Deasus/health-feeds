@@ -18,7 +18,10 @@ PULSE is a human-health app: only diseases that map to pathogens.py are kept (HP
 Rift Valley fever, West Nile, anthrax, screwworm, Nipah, CCHF, Q fever, brucellosis, tularemia, EEE …); African swine
 fever, foot-and-mouth, lumpy skin and the other animal-only diseases stay out. Every event is tagged `animal` plus
 `wild`/`domestic`; animal counts go in facts, never in `cases`. One event per WAHIS event (its newest report in the
-window). Report details are fetched at most MAX_REPORT_FETCHES per run and kept in data/reports.json between runs.
+window). Report details are fetched at most MAX_REPORT_FETCHES per run, inside a TIME_BUDGET_S wall-clock budget (the API
+answered in ~1 s per call on 2026-10-30 and 13–15 s per call at 05:00Z the next morning, so a cold start can take 14 min),
+and kept in data/reports.json between runs (saved every CACHE_EVERY fetches); an event whose detail is not cached yet is
+placed at its country centroid and upgraded on a later run.
 """
 import json
 import os
@@ -37,7 +40,11 @@ WINDOW_DAYS = 60
 PAGE_SIZE = 200
 MAX_PAGES = 10
 MAX_REPORT_FETCHES = int(os.environ.get('WAHIS_MAX_REPORT_FETCHES', '60'))
+TIME_BUDGET_S = int(os.environ.get('WAHIS_TIME_BUDGET_S', '600'))   # the API ran at 13–15 s per call on 2026-10-31 05:00Z
+CACHE_EVERY = 10
 SPACING_S = 0.5
+# WAHIS reports these as their own territories; geocode.country does not know them (seen 2026-10-31: rabies, Ceuta and Melilla)
+TERRITORIES = {'ceuta': ('ES', 'Ceuta, Spain', 35.889, -5.319), 'melilla': ('ES', 'Melilla, Spain', 35.293, -2.938)}
 # WAHIS disease names that would match a human pathogen by accident (fowl typhoid is Salmonella Gallinarum, not typhoid)
 SKIP = re.compile(r'fowl typhoid|pullorum|bovine tuberculosis|mycobacterium|mycoplasma|abortusovis|low pathogenicity|swine|porcine|'
                   r'avian chlamydiosis|bovine spongiform|theileria|babesi|infectious (?:bursal|bronchitis|laryngo)|salmon|koi|crayfish|'
@@ -99,9 +106,11 @@ def decode(rows, reports, ref):
             continue
         seen.add(r.get('eventId'))
         d = reports.get(str(r.get('reportId'))) or {}
-        country = geocode.country(d.get('iso3') or '') or geocode.country(re.sub(r'\s*\(.*?\)', '', r.get('country') or '').strip())
-        iso2 = country['iso2'] if country else None
-        country_name = country['name'] if country else (r.get('country') or '').strip()
+        raw_country = re.sub(r'\s*\(.*?\)', '', r.get('country') or '').strip()
+        country = geocode.country(d.get('iso3') or '') or geocode.country(raw_country)
+        terr = None if country else TERRITORIES.get(raw_country.lower())
+        iso2 = country['iso2'] if country else (terr[0] if terr else None)
+        country_name = country['name'] if country else (terr[1] if terr else raw_country)
         disease = (r.get('disease') or '').strip()
         totals = d.get('totals') or []
         wild = any(t.get('wild') for t in totals) or 'wild' in disease.lower()
@@ -119,6 +128,8 @@ def decode(rows, reports, ref):
         else:
             host = 'wild animals' if wild else 'animals'
         lat, lng, radius = _centre(d.get('points') or [])
+        if lat is None and terr:
+            lat, lng, radius = terr[2], terr[3], 10.0
         started = parse_date(r.get('eventStartDate')) or parse_date(d.get('started'))
         severity = events.MODERATE if (d.get('zoonotic') or (p['slug'] == 'h5n1' and mammals)) else events.MINOR
         n_out = d.get('outbreaks')
@@ -177,8 +188,15 @@ def fetch_list(ref):
     return rows
 
 
+def _save(path, reports):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(reports, f, ensure_ascii=False, separators=(',', ':'))
+
+
 def main():
     ref = now()
+    t0 = time.monotonic()
     try:
         rows = fetch_list(ref)
     except HFError as e:
@@ -197,9 +215,14 @@ def main():
         rid = str(r.get('reportId'))
         if rid in reports or fetched >= MAX_REPORT_FETCHES:
             continue
+        if time.monotonic() - t0 > TIME_BUDGET_S:          # slow API: publish what we have, the cache fills over later runs
+            log(f'  time budget of {TIME_BUDGET_S}s reached after {fetched} detail fetches; the rest stay at country precision')
+            break
         try:
             reports[rid] = compact(get_json(REPORT_URL.format(rid), timeout=60, retries=1))
             fetched += 1
+            if fetched % CACHE_EVERY == 0:
+                _save(cache_path, reports)                 # a killed run still keeps its progress
         except HFError as e:
             failed += 1
             log(f'  report {rid}: {e}')
@@ -209,11 +232,10 @@ def main():
     items = decode(rows, reports, ref)
     log(f'WAHIS: {len(rows)} reports in {WINDOW_DAYS} days, {len(wanted)} on PULSE pathogens → {len(items)} events; '
         f'{fetched} details fetched, {failed} failed, {len(reports)} cached')
-    os.makedirs(DATA, exist_ok=True)
-    with open(cache_path, 'w', encoding='utf-8') as f:
-        json.dump(reports, f, ensure_ascii=False, separators=(',', ':'))
+    _save(cache_path, reports)
     write_if_changed('events.json', envelope(items, upstream=LIST_URL, credit=CREDIT, licence=LICENCE, window_days=WINDOW_DAYS,
-                                             reports_in_window=len(rows), details_cached=len(reports)))
+                                             reports_in_window=len(rows), details_cached=len(reports),
+                                             details_fetched=fetched, budget_s=TIME_BUDGET_S, elapsed_s=round(time.monotonic() - t0, 1)))
 
 
 if __name__ == '__main__':

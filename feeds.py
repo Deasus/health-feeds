@@ -39,7 +39,7 @@ FEEDS = {
 
     # ── official, animal and wildlife health (2026-10-30, the HealthMap delta: PLAN §11) ──
     'wahis':     {'code': ['wahis', '_shared'], 'run': [['python3', 'fetch_wahis.py']],
-                  'every': 3600, 'timeout': 900, 'optional': ['WAHIS_MAX_REPORT_FETCHES']},
+                  'every': 3600, 'timeout': 1200, 'optional': ['WAHIS_MAX_REPORT_FETCHES', 'WAHIS_TIME_BUDGET_S']},
     'aphis':     {'code': ['aphis', '_shared'], 'run': [['python3', 'fetch_aphis.py']],
                   'every': 21600, 'timeout': 600},
     'whispers':  {'code': ['whispers', '_shared'], 'run': [['python3', 'fetch_whispers.py']],

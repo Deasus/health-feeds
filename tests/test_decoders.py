@@ -4,6 +4,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
@@ -370,9 +371,54 @@ class WAHISTests(unittest.TestCase):
         self.assertTrue(any(e['pathogen'] == 'anthrax' and e['country_code'] == 'GR' for e in evs))
         lv = [e for e in evs if e['country_code'] == 'LV' and e['pathogen'] == 'h5n1']
         self.assertTrue(lv and all(e['geo_precision'] == 'country' for e in lv))     # no detail cached yet → country centroid
+        ceuta = dict(lst[0], reportId=999001, eventId=999001, country='Ceuta', disease='Rabies virus (Inf. with)', reportType='IN',
+                     submissionDate='2026-10-29T10:00:00Z')
+        ce = mod.decode([ceuta], {}, datetime(2026, 10, 30, 12, tzinfo=timezone.utc))[0]
+        self.assertEqual((ce['country_code'], ce['geo_precision'], ce['pathogen']), ('ES', 'point', 'rabies'))
+        self.assertTrue(35 < ce['lat'] < 36 and -6 < ce['lng'] < -5 and 'Ceuta' in ce['title'])
         self.assertIsNone(mod.pathogen_for('Fowl typhoid'))
         self.assertIsNone(mod.pathogen_for('African swine fever virus (Inf. with)'))
         self.assertEqual(mod.pathogen_for('Influenza A viruses of high pathogenicity (Inf. with) (non-poultry including wild birds) (2017-)')['slug'], 'h5n1')
+
+    def test_time_budget(self):
+        """A slow API: once the budget is spent no detail is fetched, events still publish at country precision, the cache is saved."""
+        mod = importlib.import_module('fetch_wahis')
+        lst = load_json('wahis_list.json')['list']
+        rep = load_json('wahis_report.json')
+        calls = []
+
+        def fake_get_json(url, **kw):
+            calls.append(url)
+            return rep
+        names = ('fetch_list', 'get_json', 'DATA', 'TIME_BUDGET_S', 'MAX_REPORT_FETCHES', 'SPACING_S', 'now')
+        saved = {n: getattr(mod, n) for n in names}
+        saved_hf_data = hf.DATA
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                mod.fetch_list = lambda ref: lst
+                mod.get_json = fake_get_json
+                mod.DATA = hf.DATA = tmp
+                mod.SPACING_S = 0
+                mod.now = lambda: datetime(2026, 10, 30, 12, tzinfo=timezone.utc)
+                mod.TIME_BUDGET_S = -1                                   # budget already spent
+                mod.main()
+                self.assertEqual(calls, [])
+                with open(os.path.join(tmp, 'events.json'), encoding='utf-8') as f:
+                    out = json.load(f)
+                self.assertTrue(out['items'] and all(e['geo_precision'] == 'country' for e in out['items']))
+                self.assertEqual((out['details_fetched'], out['details_cached']), (0, 0))
+                self.assertTrue(os.path.exists(os.path.join(tmp, 'reports.json')))
+                mod.TIME_BUDGET_S = 600
+                mod.MAX_REPORT_FETCHES = 2                                 # budget open: the count cap applies
+                mod.main()
+                self.assertEqual(len(calls), 2)
+                with open(os.path.join(tmp, 'events.json'), encoding='utf-8') as f:
+                    out = json.load(f)
+                self.assertEqual((out['details_fetched'], out['details_cached']), (2, 2))
+        finally:
+            for n, v in saved.items():
+                setattr(mod, n, v)
+            hf.DATA = saved_hf_data
 
 
 class APHISTests(unittest.TestCase):

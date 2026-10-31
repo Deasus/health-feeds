@@ -124,8 +124,8 @@ Outputs land in `work/<feed>/data/`. Python 3.9+ and the standard library only.
 
 Secrets (GitHub Actions, all optional): `SOCRATA_APP_TOKEN` (lifts data.cdc.gov throttling),
 `OPENFDA_API_KEY` (120,000 requests/day instead of 1,000), `RELIEFWEB_APPNAME` (enables the
-ReliefWeb feed), `ANTHROPIC_API_KEY` (enables the curator pass; set 2026-10-22). `WAHIS_MAX_REPORT_FETCHES` (default 60) caps
-the per-run detail fetches on a cold start.
+ReliefWeb feed), `ANTHROPIC_API_KEY` (enables the curator pass; set 2026-10-22). `WAHIS_MAX_REPORT_FETCHES` (default 60) and
+`WAHIS_TIME_BUDGET_S` (default 600) cap the per-run detail fetches on a cold start.
 
 ## Known sensitivities
 
@@ -141,6 +141,9 @@ the per-run detail fetches on a cold start.
 - **aphis.usda.gov** 403s browser-like User-Agents (Akamai) but serves the pipeline's own `health-feeds/1.0` UA; keep it.
 - **WAHIS** has no documented API: the list endpoint is a POST with the dashboard's filter body and `totalSize`; a report's
   `all-information` carries the coordinates. Details are cached in `wahis/reports.json` so each report is fetched once.
+  The API's speed varies 13×: ~1 s per call during the day on 2026-10-30, 13–15 s per call at 05:00Z on 2026-10-31 (the
+  first Actions run took 14 min for 60 details). The fetcher stops fetching details after `WAHIS_TIME_BUDGET_S` and
+  publishes the rest at country precision; the cache fills over the following hourly runs.
 - **WHO DON `$skip`** repeats pages past ~1,100 rows when publication dates tie; the archive walks a `$filter` date cursor
   and keys rows by `UrlName` (DonId is not unique).
 
