@@ -94,6 +94,8 @@ PATHOGENS = [
     ('leptospirosis', 'Leptospirosis', 'zoonotic', [r'leptospir(?:a|osis)', r'leptospirose', r'钩端螺旋体', r'鉤端螺旋體', r'лептоспироз\w*']),
     ('tularemia', 'Tularemia', 'zoonotic', [r'tularemia', r'tularémie', r'tularemie', r'土拉菌', r'兔热病', r'туляреми\w*']),
     ('q_fever', 'Q fever', 'zoonotic', [r'q fever', r'coxiella', r'fiebre q\b', r'fièvre q\b', r'febre q\b', r'q热', r'ку-лихорадк\w*']),
+    ('melioidosis', 'Melioidosis', 'zoonotic', [r'melioid(?:osis|ose)', r'burkholderia pseudomallei', r'pseudomallei', r"whitmore'?s disease", r'melioidose', r'类鼻疽', r'類鼻疽', r'мелиоидоз\w*']),
+    ('glanders', 'Glanders', 'zoonotic', [r'\bglanders\b', r'burkholderia mallei', r'\bmuermo\b', r'\bmorve\b', r'\bmormo\b', r'鼻疽', r'\bсап\b']),
     ('screwworm', 'New World screwworm', 'zoonotic', [r'screwworm', r'cochliomyia hominivorax', r'myiasis', r'gusano barrenador', r'miasis', r'bicheira',
                                                        r'lucilie bouchère', r'螺旋锥蝇']),
     ('meningitis', 'Meningococcal disease', 'bacterial', [r'meningococc\w+', r'meningitis', r'méningite', r'meningite', r'التهاب السحايا', r'脑膜炎', r'腦膜炎',

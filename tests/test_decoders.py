@@ -65,6 +65,8 @@ class PathogenTests(unittest.TestCase):
         self.assertEqual(pathogens.primary('Chapare haemorrhagic fever - Bolivia')['slug'], 'chapare')
         self.assertEqual([p['slug'] for p in pathogens.find('bird flu and seasonal flu')], ['h5n1', 'influenza'])
         self.assertIsNone(pathogens.primary('Traffic safety in France'))
+        self.assertEqual(pathogens.primary('Melioidosis cluster linked to aromatherapy spray')['slug'], 'melioidosis')
+        self.assertEqual(pathogens.primary('Glanders in horses: Burkholderia mallei confirmed')['slug'], 'glanders')
 
     def test_counts(self):
         cases, deaths, quote = events.counts_from_text(
