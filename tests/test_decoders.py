@@ -304,6 +304,12 @@ class CuratorTests(unittest.TestCase):
                 arr.append({'i': h['i'], 'outbreak': True, 'pathogen': 'measles', 'country': 'US', 'place': 'Pennsylvania', 'cases': 1317, 'deaths': 5, 'quote': '1,317 Measles Cases, 5 Deaths'})
             elif 'bunia' in t:
                 arr.append({'i': h['i'], 'outbreak': True, 'pathogen': 'ebola', 'country': 'CD', 'place': 'Bunia', 'cases': 12, 'deaths': None, 'quote': '12 new cases'})
+            elif 'washington, d.c.' in t:
+                arr.append({'i': h['i'], 'outbreak': True, 'pathogen': 'measles', 'country': 'US', 'place': 'Washington, D.C.', 'cases': None, 'deaths': None, 'quote': None})
+            elif 'washington resident' in t:
+                arr.append({'i': h['i'], 'outbreak': True, 'pathogen': 'h5n1', 'country': 'US', 'place': 'Washington', 'cases': None, 'deaths': 1, 'quote': 'resident dies'})
+            elif 'chippewa' in t:
+                arr.append({'i': h['i'], 'outbreak': True, 'pathogen': 'measles', 'country': 'US', 'place': 'Chippewa County', 'cases': 33, 'deaths': None, 'quote': 'Cases Reach 33'})
             else:
                 arr.append({'i': h['i'], 'outbreak': True, 'pathogen': None, 'country': None, 'place': None, 'cases': None, 'deaths': None, 'quote': None})
         return arr, {'input_tokens': 10, 'output_tokens': 10}
@@ -323,10 +329,26 @@ class CuratorTests(unittest.TestCase):
                             pathogen='measles', country_code='US', admin1='Pennsylvania', admin1_code='PA', source_id='s1')
         pa_news = events.make(source='Google News', source_tier='news', kind='news', title='Pennsylvania Reports 1,317 Measles Cases, 5 Deaths', updated=NOW,
                               pathogen='measles', country_code='US', lat=None, lng=None, geo_precision='none', source_id='n3')
-        items = be.enrich_news([who, news, opinion, nndss, pa_news], NOW, call=self.fake_call)
-        self.assertEqual(len(items), 4)                                   # the opinion piece is dropped
-        pa = next(e for e in items if e['source'] == 'Google News')
+        # 2026-11-02: a place that is both a state and a city is the state; a county resolves through the state in the headline
+        cdc = events.make(source='CDC', source_tier='official', kind='surveillance', title='H5N1 - United States', updated=NOW,
+                          pathogen='h5n1', country_code='US', source_id='c1')
+        wa_news = events.make(source='Google News', source_tier='news', kind='news', title='Washington resident dies in first U.S. bird flu fatality of 2026',
+                              updated=NOW, pathogen='h5n1', country_code='US', lat=None, lng=None, geo_precision='none', source_id='n4')
+        dc_news = events.make(source='Google News', source_tier='news', kind='news', title='Washington, D.C. confirms a measles case at a school',
+                              updated=NOW, pathogen='measles', country_code='US', lat=None, lng=None, geo_precision='none', source_id='n5')
+        wi_news = events.make(source='Google News', source_tier='news', kind='news', title='Chippewa County Measles Cases Reach 33 as Wisconsin Confirms Local Spread',
+                              updated=NOW, pathogen='measles', country_code='US', lat=None, lng=None, geo_precision='none', source_id='n6')
+        items = be.enrich_news([who, news, opinion, nndss, pa_news, cdc, wa_news, dc_news, wi_news], NOW, call=self.fake_call)
+        self.assertEqual(len(items), 8)                                   # the opinion piece is dropped
+        by_title = lambda rows, start: next(e for e in rows if e['title'].startswith(start))
+        pa = by_title(items, 'Pennsylvania')
         self.assertEqual((pa['admin1_code'], pa['cases'], pa['deaths']), ('PA', 1317, 5))
+        wa = by_title(items, 'Washington resident')
+        self.assertEqual(wa['admin1_code'], 'WA')                         # the state, not the capital
+        self.assertNotIn('_city', wa)
+        self.assertEqual(by_title(items, 'Washington, D.C.')['admin1_code'], 'DC')
+        wi = by_title(items, 'Chippewa')
+        self.assertEqual((wi['admin1_code'], wi['_county']['fips'], wi['cases']), ('WI', '55017', 33))
         n = next(e for e in items if e['source'] == 'GDELT')
         self.assertEqual((n['pathogen'], n['country_code'], n['cases']), ('ebola', 'CD', 12))
         self.assertIn('llm-extracted', n['tags'])
@@ -337,12 +359,21 @@ class CuratorTests(unittest.TestCase):
         n = next(e for e in merged if e['source'] == 'GDELT')
         self.assertEqual(n['corroboration'], 1)
         self.assertEqual(n['geo_precision'], 'point')                     # corroborated news lands on the stated city
-        self.assertTrue(all('_city' not in e and '_state' not in e for e in merged))
+        self.assertTrue(all('_city' not in e and '_state' not in e and '_county' not in e for e in merged))
         self.assertAlmostEqual(n['lat'], 1.559, places=2)
-        pa = next(e for e in merged if e['source'] == 'Google News')
+        pa = by_title(merged, 'Pennsylvania')
         self.assertEqual(pa['geo_precision'], 'admin1')                   # state named by the curator, corroborated by NNDSS
         self.assertTrue(100 < pa['geo_radius_km'] < 500)
         self.assertNotIn('_city', n)
+        wa = by_title(merged, 'Washington resident')                      # corroborated by CDC: Washington State's centroid, not 38.9 N
+        self.assertEqual((wa['geo_precision'], wa['admin1_code']), ('admin1', 'WA'))
+        self.assertAlmostEqual(wa['lat'], 47.29, places=1)
+        dc = by_title(merged, 'Washington, D.C.')
+        self.assertEqual((dc['geo_precision'], dc['admin1_code']), ('admin1', 'DC'))
+        self.assertAlmostEqual(dc['lat'], 38.91, places=1)
+        wi = by_title(merged, 'Chippewa')                                 # county centroid with the county's own radius
+        self.assertEqual((wi['geo_precision'], wi['geo_radius_km'], wi['area']), ('point', 26.0, 'Chippewa County, Wisconsin'))
+        self.assertAlmostEqual(wi['lat'], 45.07, places=1)
         # second call hits the cache: no model call needed
         r2 = llm.enrich(['Unknown illness: 12 new cases in Bunia'], call=lambda b: (_ for _ in ()).throw(AssertionError('should be cached')))
         self.assertEqual(r2['Unknown illness: 12 new cases in Bunia']['pathogen'], 'ebola')

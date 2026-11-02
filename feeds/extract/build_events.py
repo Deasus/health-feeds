@@ -11,10 +11,12 @@ branch), then:
   5. sorts by severity, then recency.
 
 Before step 2 the curator pass runs (llm_extract.py, Haiku, cached 72 h, only with ANTHROPIC_API_KEY): headlines
-that are not outbreak news are dropped, pathogen/country/counts are filled where stated, and a stated city becomes a
-point (gazetteer.py, GeoNames) once the item is corroborated. Official country-level events whose text names a city
+that are not outbreak news are dropped, pathogen/country/counts are filled where stated, and a stated place becomes a
+state (admin1), a US county (counties.json, when the headline names the state) or a city point (gazetteer.py, GeoNames)
+once the item is corroborated; a state is tried before a city of the same name. Official country-level events whose text names a city
 are placed at that city too.
 """
+import re
 from collections import Counter, defaultdict
 from datetime import timedelta
 from hf import sibling_data, write_if_changed, envelope, parse_date, log, fail, now
@@ -29,6 +31,10 @@ SOURCES = [
 ]
 WINDOW_DAYS = 45
 CORROBORATION_DAYS = 21
+# A curator place that names a US county ("Chippewa County", "Orleans Parish"): resolved through counties.json when the
+# headline also names exactly one state (2026-11-02; before this, such items fell back to the country centroid).
+COUNTY_RX = re.compile(r'\b(county|parish|borough|census area)\b', re.I)
+STATE_SUFFIX_RX = re.compile(r'\s+state$', re.I)          # "Washington state" → "Washington"
 
 
 def load():
@@ -74,16 +80,33 @@ def enrich_news(items, ref, call=None):
             e['area'] = geocode.country(r['country'])['name']
             filled += 1
         if r['place']:
-            hit = gazetteer.city(r['place'], e.get('country_code')) or (gazetteer.find_places(r['place'], e.get('country_code')) or [None])[0]
-            if hit and (not e.get('country_code') or hit['country'] == e['country_code']):
-                e['_city'] = hit                              # applied only once corroborated (merge step)
+            place, cc = r['place'], e.get('country_code')
+            st = cty = hit = None
+            if cc in ('US', 'CA', 'AU') and not place.lower().endswith('city'):
+                # A state before a city of the same name (2026-11-02): "Washington" is the state; only "Washington, D.C."
+                # is the capital. Before this, "Washington resident dies of bird flu" was pinned to the District.
+                st = geocode.state(STATE_SUFFIX_RX.sub('', place), cc)
+            if st is None and cc == 'US' and COUNTY_RX.search(place):
+                named = geocode.find_us_states(e.get('title') or '')
+                if len(named) == 1:
+                    cty = geocode.county(place, named[0]['code'])
+                    if cty:
+                        st = named[0]
+            if st is None and cty is None:
+                hit = gazetteer.city(place, cc) or (gazetteer.find_places(place, cc) or [None])[0]
+                if hit and cc and hit['country'] != cc:
+                    hit = None
+            if cty:
+                e['admin1'], e['admin1_code'] = st['name'], st['code']
+                e['_county'] = cty                            # applied only once corroborated (merge step)
                 placed += 1
-            elif e.get('country_code') in ('US', 'CA', 'AU'):
-                st = geocode.state(r['place'], e['country_code'])   # "Pennsylvania", "Ontario": a state, not a city
-                if st:
-                    e['admin1'], e['admin1_code'] = st['name'], st['code']
-                    e['_state'] = st
-                    placed += 1
+            elif hit:
+                e['_city'] = hit
+                placed += 1
+            elif st:
+                e['admin1'], e['admin1_code'] = st['name'], st['code']
+                e['_state'] = st
+                placed += 1
         if r['cases'] is not None and e.get('cases') is None:
             e['cases'], e['deaths'], e['cases_quote'] = r['cases'], r['deaths'], r['quote']
         e['tags'] = sorted(set(e.get('tags', [])) | {'llm-extracted'})
@@ -137,9 +160,13 @@ def merge(items, ref):
         if ev['source_tier'] == 'news':
             city = ev.pop('_city', None)
             state = ev.pop('_state', None)
+            county = ev.pop('_county', None)
             if ev['corroboration'] >= 1 and ev.get('country_code'):
                 c = geocode.country(ev['country_code'])
-                if city:
+                if county:
+                    ev['lat'], ev['lng'], ev['geo_precision'], ev['geo_radius_km'] = county['lat'], county['lng'], 'point', county['radius_km']
+                    ev['area'] = f"{county['name']}, {ev.get('admin1') or county['state']}"
+                elif city:
                     ev['lat'], ev['lng'], ev['geo_precision'], ev['geo_radius_km'] = city['lat'], city['lng'], 'point', gazetteer.CITY_RADIUS_KM
                     ev['area'] = f"{city['name']}, {c['name'] if c else ev['country_code']}"
                 elif state:
