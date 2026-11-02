@@ -87,9 +87,11 @@ def enrich_news(items, ref, call=None):
                 # is the capital. Before this, "Washington resident dies of bird flu" was pinned to the District.
                 st = geocode.state(STATE_SUFFIX_RX.sub('', place), cc)
             if st is None and cc == 'US' and COUNTY_RX.search(place):
-                named = geocode.find_us_states(e.get('title') or '')
+                head, _, tail = place.partition(',')             # "Chippewa County, Wisconsin" names its state; "Stanislaus County"
+                in_place = geocode.state(tail.strip(), 'US') if tail.strip() else None    # borrows the one the headline names
+                named = [in_place] if in_place else geocode.find_us_states(e.get('title') or '')
                 if len(named) == 1:
-                    cty = geocode.county(place, named[0]['code'])
+                    cty = geocode.county(head.strip(), named[0]['code'])
                     if cty:
                         st = named[0]
             if st is None and cty is None:

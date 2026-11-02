@@ -65,9 +65,11 @@ country's current advisory), `gdelt/articles.json.articles` (headline rows).
 
 **The curator pass (`feeds/extract/llm_extract.py`, PLAN §4.6):** with `ANTHROPIC_API_KEY` set, Claude Haiku reads every
 news headline once (cached 72 h in `extract/llm_cache.json`, at most 300 new headlines per run, thinking disabled): items
-that are not outbreak news are dropped; pathogen, country, a stated city and verbatim counts are filled in; the city
-becomes a point (GeoNames gazetteer, `feeds/_shared/gazetteer.py` + `cities.json`, CC BY 4.0, 12,456 cities ≥ 50k plus
-capitals, ~15 km radius) once the item is corroborated. Official country-level events whose own text names a city are
+that are not outbreak news are dropped; pathogen, country, a stated place and verbatim counts are filled in; once the item
+is corroborated the place becomes a state centroid (`admin1`; a state is tried before a city of the same name, so a bare
+"Washington" is the state and only "Washington, D.C." the capital), a US county centroid with the county's radius
+(`counties.json`, when the place or the headline names the state) or a city point (GeoNames gazetteer,
+`feeds/_shared/gazetteer.py` + `cities.json`, CC BY 4.0, 12,456 cities ≥ 50k plus capitals, ~15 km radius). Official country-level events whose own text names a city are
 placed at that city too (`city-from-text`). Without the key the merge runs rule-based only.
 
 **Rules the merge applies (`feeds/extract/build_events.py`):** events older than 45 days are dropped;

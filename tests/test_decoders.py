@@ -308,8 +308,10 @@ class CuratorTests(unittest.TestCase):
                 arr.append({'i': h['i'], 'outbreak': True, 'pathogen': 'measles', 'country': 'US', 'place': 'Washington, D.C.', 'cases': None, 'deaths': None, 'quote': None})
             elif 'washington resident' in t:
                 arr.append({'i': h['i'], 'outbreak': True, 'pathogen': 'h5n1', 'country': 'US', 'place': 'Washington', 'cases': None, 'deaths': 1, 'quote': 'resident dies'})
-            elif 'chippewa' in t:
-                arr.append({'i': h['i'], 'outbreak': True, 'pathogen': 'measles', 'country': 'US', 'place': 'Chippewa County', 'cases': 33, 'deaths': None, 'quote': 'Cases Reach 33'})
+            elif 'chippewa' in t:        # Haiku's real answer on 2026-11-02: the county with its state
+                arr.append({'i': h['i'], 'outbreak': True, 'pathogen': 'measles', 'country': 'US', 'place': 'Chippewa County, Wisconsin', 'cases': 33, 'deaths': None, 'quote': 'Cases Reach 33'})
+            elif 'stanislaus' in t:      # and the county alone, the state only in the headline
+                arr.append({'i': h['i'], 'outbreak': True, 'pathogen': 'mpox', 'country': 'US', 'place': 'Stanislaus County', 'cases': None, 'deaths': None, 'quote': None})
             else:
                 arr.append({'i': h['i'], 'outbreak': True, 'pathogen': None, 'country': None, 'place': None, 'cases': None, 'deaths': None, 'quote': None})
         return arr, {'input_tokens': 10, 'output_tokens': 10}
@@ -338,8 +340,10 @@ class CuratorTests(unittest.TestCase):
                               updated=NOW, pathogen='measles', country_code='US', lat=None, lng=None, geo_precision='none', source_id='n5')
         wi_news = events.make(source='Google News', source_tier='news', kind='news', title='Chippewa County Measles Cases Reach 33 as Wisconsin Confirms Local Spread',
                               updated=NOW, pathogen='measles', country_code='US', lat=None, lng=None, geo_precision='none', source_id='n6')
-        items = be.enrich_news([who, news, opinion, nndss, pa_news, cdc, wa_news, dc_news, wi_news], NOW, call=self.fake_call)
-        self.assertEqual(len(items), 8)                                   # the opinion piece is dropped
+        ca_news = events.make(source='Google News', source_tier='news', kind='news', title='California: Clade 1 mpox cases reported in Stanislaus County',
+                              updated=NOW, pathogen='mpox', country_code='US', lat=None, lng=None, geo_precision='none', source_id='n7')
+        items = be.enrich_news([who, news, opinion, nndss, pa_news, cdc, wa_news, dc_news, wi_news, ca_news], NOW, call=self.fake_call)
+        self.assertEqual(len(items), 9)                                   # the opinion piece is dropped
         by_title = lambda rows, start: next(e for e in rows if e['title'].startswith(start))
         pa = by_title(items, 'Pennsylvania')
         self.assertEqual((pa['admin1_code'], pa['cases'], pa['deaths']), ('PA', 1317, 5))
@@ -349,6 +353,8 @@ class CuratorTests(unittest.TestCase):
         self.assertEqual(by_title(items, 'Washington, D.C.')['admin1_code'], 'DC')
         wi = by_title(items, 'Chippewa')
         self.assertEqual((wi['admin1_code'], wi['_county']['fips'], wi['cases']), ('WI', '55017', 33))
+        ca = by_title(items, 'California: Clade')
+        self.assertEqual((ca['admin1_code'], ca['_county']['fips']), ('CA', '06099'))
         n = next(e for e in items if e['source'] == 'GDELT')
         self.assertEqual((n['pathogen'], n['country_code'], n['cases']), ('ebola', 'CD', 12))
         self.assertIn('llm-extracted', n['tags'])
