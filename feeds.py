@@ -45,6 +45,10 @@ FEEDS = {
     'whispers':  {'code': ['whispers', '_shared'], 'run': [['python3', 'fetch_whispers.py']],
                   'every': 21600, 'timeout': 900},
 
+    # ── official, hospital capacity (2026-11-15, PULSE Web care layer; not merged into extract) ──
+    'nhsn':      {'code': ['nhsn'], 'run': [['python3', 'fetch_nhsn_hrd.py']],
+                  'every': 86400, 'timeout': 300, 'optional': ['SOCRATA_APP_TOKEN']},
+
     # ── aggregators ────────────────────────────────────────────────────────────
     'hdx':       {'code': ['hdx', '_shared'], 'run': [['python3', 'fetch_hdx.py']],
                   'every': 21600, 'timeout': 600},

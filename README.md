@@ -29,6 +29,7 @@ https://raw.githubusercontent.com/Deasus/health-feeds/status/status.json    # he
 | `wahis` | `events.json` | WOAH WAHIS official animal-disease notifications, zoonoses and HPAI only, with outbreak coordinates (public API behind wahis.woah.org) | 1 h | WOAH: public data, attribution; commercial reuse permission requested (PLAN §4.7) |
 | `aphis` | `hpai.json` | USDA APHIS HPAI detections in wild birds and mammals (CSV), one event per US county in 45 days | 6 h | public domain |
 | `whispers` | `events.json` | USGS WHISPers wildlife morbidity/mortality events (zoonotic diagnoses and undiagnosed die-offs ≥ 100 animals) | 6 h | public domain |
+| `nhsn` | `hrd.json` | CDC NHSN Weekly Hospital Respiratory Data by jurisdiction (Socrata `ua7e-t2fy`): inpatient and ICU beds, occupied, % occupied as CDC publishes it, hospitals reporting; states, DC, territories and USA, newest 15 weeks; not merged into events (capacity, not events) | 24 h (weekly data) | public domain |
 | `gdelt` | `articles.json` | GDELT DOC 2.0, health themes and keywords (one translingual slot per rotation) | 30 min | GDELT terms; headlines © publishers |
 | `gnews` | `articles.json` | Google News RSS, 62 health queries in eight languages (English 20; Spanish, French, Portuguese, Arabic, Chinese, Russian, Indonesian 6 each) | 30 min | headlines © publishers; RSS used for discovery |
 | `reliefweb` | `disasters.json` | ReliefWeb API v2, disasters typed Epidemic (needs `RELIEFWEB_APPNAME`) | 30 min | attribution |
