@@ -76,6 +76,26 @@ class PathogenTests(unittest.TestCase):
         self.assertEqual((cases, deaths), (3605, 1587))
         self.assertEqual(events.counts_from_text('no figures here'), (None, None, None))
 
+    def test_counts_with_a_space_as_thousands_separator(self):
+        """WHO DON625 wrote "10 668 confirmed cases"; the merge stored 668 (defect found 2026-11-14, fixed 2026-11-25)."""
+        sentence = ('As of 3 November 2026, a total of 10 668 confirmed cases, including 5198 deaths (crude case fatality ratio: '
+                    '48.7%), have been reported across 67 health zones in eight provinces')
+        self.assertEqual(events.counts_from_text(sentence), (10668, 5198, '10 668 confirmed cases'))
+        for sep in (' ', ' ', ' '):                        # no-break, thin and narrow no-break spaces
+            cases, deaths, quote = events.counts_from_text(sentence.replace('10 668', f'10{sep}668').replace('5198', f'5{sep}198'))
+            self.assertEqual((cases, deaths, quote), (10668, 5198, f'10{sep}668 confirmed cases'))
+        self.assertEqual(events.counts_from_text('In 2024 1 234 cases were reported, including 1 001 deaths')[:2], (1234, 1001))
+        self.assertEqual(events.counts_from_text('In epidemiological week 44 210 cases were reported')[:2], (210, None))
+        self.assertEqual(events.counts_from_text('From 1 to 7 January 2026, 120 cases and 2 deaths')[:2], (120, 2))
+        who = importlib.import_module('fetch_who')
+        items = who.decode(load_json('who_don625.json'))
+        self.assertEqual([i['country_code'] for i in items], ['CD', 'KE', 'NG'])
+        self.assertTrue(all((i['cases'], i['deaths'], i['cases_quote']) == (10668, 5198, '10 668 confirmed cases') for i in items))
+        self.assertIn(['Cases', '10,668'], items[0]['facts'])
+        archive = importlib.import_module('fetch_who_archive')
+        row = archive.compact(load_json('who_don625.json')['value'][0])
+        self.assertEqual((row['cases'], row['deaths']), (10668, 5198))
+
 
 class WHOTests(unittest.TestCase):
     def test_decode(self):
@@ -527,6 +547,38 @@ class WHOArchiveTests(unittest.TestCase):
         self.assertGreater(sum(1 for r in rows if r['pathogen']), 80)
         self.assertGreater(sum(1 for r in rows if r['countries']), 70)
         self.assertTrue(all('summary' not in r and 'body' not in r for r in rows))
+
+    def test_rows_are_rederived_once_after_a_rule_change(self):
+        """A complete archive written before ROWS_VERSION is walked to the end once more, so old rows get the new counts;
+        after that a run stops at the first page of known notices again."""
+        mod = importlib.import_module('fetch_who_archive')
+        page = load_json('who_archive_page.json')['value']                  # 100 notices, all already known
+        don625 = load_json('who_don625.json')['value'][0]                  # the end of the archive (a short page)
+        calls = []
+
+        def fake_get_json(url, **kw):
+            calls.append(url)
+            return {'value': page if '$filter' not in url else [don625]}
+        saved = {n: getattr(mod, n) for n in ('get_json', 'DATA', 'SPACING_S')}
+        saved_hf_data = hf.DATA
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                mod.get_json, mod.DATA, hf.DATA, mod.SPACING_S = fake_get_json, tmp, tmp, 0
+                known = [mod.compact(v) for v in page] + [dict(mod.compact(don625), cases=668)]     # as stored before the fix
+                with open(os.path.join(tmp, 'archive.json'), 'w', encoding='utf-8') as f:
+                    json.dump({'complete': True, 'items': known}, f)
+                mod.main()
+                with open(os.path.join(tmp, 'archive.json'), encoding='utf-8') as f:
+                    out = json.load(f)
+                self.assertEqual(len(calls), 2)                               # walked past the known first page
+                row = next(r for r in out['items'] if r['id'] == '2026-DON625')
+                self.assertEqual((out['rows_version'], row['cases'], row['deaths'], out['complete']), (mod.ROWS_VERSION, 10668, 5198, True))
+                mod.main()
+                self.assertEqual(len(calls), 3)                               # re-derived once: back to one page per run
+        finally:
+            for n, v in saved.items():
+                setattr(mod, n, v)
+            hf.DATA = saved_hf_data
 
 
 class MultilingualNewsTests(unittest.TestCase):

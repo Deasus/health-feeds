@@ -98,10 +98,19 @@ def make(*, source, source_tier, kind, title, updated, pathogen=None, severity=I
     return ev
 
 
-_CASES = re.compile(r'(?<![\d,.])(\d{1,3}(?:,\d{3})+|\d+)\s+(?:laboratory[- ]confirmed |confirmed |suspected |probable |new |additional |cumulative |total )?'
+# One stated number. Thousands are grouped by a comma ("3,605") or, as WHO writes them, by a space: plain, no-break
+# (U+00A0), thin (U+2009) or narrow no-break (U+202F), so "10 668 confirmed cases" is 10668, not 668 (2026-11-25, DON625).
+# A space-grouped number never starts right after "week"/"weeks" ("in week 44 210 cases" is 210 cases).
+_SEP = '[    ]'
+_NUM = rf'(?<![\d,.])(?<!week )(?<!weeks )(\d{{1,3}}(?:,\d{{3}})+|\d{{1,3}}(?:{_SEP}\d{{3}})+|\d+)'
+_CASES = re.compile(_NUM + r'\s+(?:laboratory[- ]confirmed |confirmed |suspected |probable |new |additional |cumulative |total )?'
                     r'(?:human )?(?:cases?|infections?|patients|people (?:have been |were )?(?:infected|sickened|hospitali[sz]ed))', re.I)
-_DEATHS = re.compile(r'(?<![\d,.])(\d{1,3}(?:,\d{3})+|\d+)\s+(?:deaths?|fatalities|people (?:have )?died|dead)\b|'
-                     r'including\s+(\d{1,3}(?:,\d{3})+|\d+)\s+(?:deaths?|fatal)', re.I)
+_DEATHS = re.compile(_NUM + r'\s+(?:deaths?|fatalities|people (?:have )?died|dead)\b|'
+                     r'including\s+' + _NUM + r'\s+(?:deaths?|fatal)', re.I)
+
+
+def _int(s: str) -> int:
+    return int(re.sub(r'[,\s   ]', '', s))
 _WORDNUM = {'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
             'eleven': 11, 'twelve': 12, 'fifteen': 15, 'twenty': 20}
 
@@ -114,11 +123,11 @@ def counts_from_text(text: str):
     cases = deaths = None
     quote = None
     for m in _CASES.finditer(t):
-        n = int(m.group(1).replace(',', ''))
+        n = _int(m.group(1))
         if cases is None or n > cases:
             cases, quote = n, m.group(0)
     for d in _DEATHS.finditer(t):
-        n = int((d.group(1) or d.group(2)).replace(',', ''))
+        n = _int(d.group(1) or d.group(2))
         if deaths is None or n > deaths:
             deaths = n
             quote = quote or d.group(0)

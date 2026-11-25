@@ -139,7 +139,10 @@ ReliefWeb feed), `ANTHROPIC_API_KEY` (enables the curator pass; set 2026-10-22).
   Never call GDELT from the app.
 - **cdc.gov** (not data.cdc.gov) returns 403 to non-browser clients. Everything here uses Socrata or
   `wwwnc.cdc.gov` RSS.
-- **WHO DON** sorts oldest-first by default and has no geography; countries are read from the title.
+- **WHO DON** sorts oldest-first by default and has no geography; countries are read from the title. WHO groups thousands
+  with a space, sometimes a no-break or thin space ("10 668 confirmed cases"); counts accept that as well as a comma
+  (`events.counts_from_text`). `archive.json` carries `rows_version`: when the derivation changes, the next run re-walks the
+  archive once so stored rows are re-derived.
 - **State Dept RSS** is ~600 KB for 222 items; health relevance comes from the bolded reasons.
 - **aphis.usda.gov** 403s browser-like User-Agents (Akamai) but serves the pipeline's own `health-feeds/1.0` UA; keep it.
 - **WAHIS** has no documented API: the list endpoint is a POST with the dashboard's filter body and `totalSize`; a report's

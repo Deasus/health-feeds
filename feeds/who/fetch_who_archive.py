@@ -27,6 +27,10 @@ LICENCE = 'WHO terms of use (public-health use, attribution; no commercial promo
 PAGE = 100
 MAX_PAGES = 80
 SPACING_S = 1.0
+# Bump when compact() changes what it derives from a summary. The next run then walks the whole archive once more
+# (~35 requests, as on the first walk) so stored rows are re-derived; until a walk reaches the end it is tried again.
+# 2 (2026-11-25): counts written with a space as the thousands separator ("10 668 confirmed cases" was stored as 668).
+ROWS_VERSION = 2
 
 
 def compact(v: dict) -> dict:
@@ -44,7 +48,8 @@ def compact(v: dict) -> dict:
 def main():
     prev = read_json(os.path.join(DATA, 'archive.json')) or {}
     known = {r['id']: r for r in prev.get('items', []) if r.get('id')}
-    full = not prev.get('complete')
+    rederive = prev.get('rows_version') != ROWS_VERSION
+    full = not prev.get('complete') or rederive
     rows, pages, ended_short = [], 0, False
     cursor, op, seen = None, 'le', set()
     for page in range(MAX_PAGES):
@@ -86,10 +91,11 @@ def main():
     if not items:
         fail('WHO DON archive decoded to zero items')
     complete = bool(prev.get('complete')) or ended_short
+    rows_version = ROWS_VERSION if (ended_short or not rederive) else prev.get('rows_version')
     by_year = Counter((r.get('date') or '')[:4] for r in items)
     log(f'WHO DON archive: {len(items)} notices ({pages} pages read this run, {len(rows)} rows), complete={complete}')
     write_if_changed('archive.json', envelope(items, upstream=URL, credit=CREDIT, licence=LICENCE, complete=complete,
-                                              first=items[-1].get('date'), last=items[0].get('date'), by_year=dict(sorted(by_year.items()))))
+                                              rows_version=rows_version, first=items[-1].get('date'), last=items[0].get('date'), by_year=dict(sorted(by_year.items()))))
 
 
 if __name__ == '__main__':

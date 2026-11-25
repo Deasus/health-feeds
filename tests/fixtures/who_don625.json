@@ -1,0 +1,13 @@
+{
+ "_note": "WHO DON 2026-DON625 (published 2026-11-06): title, date, ids and the first two summary paragraphs as WHO wrote them (a plain space as the thousands separator). Other API fields omitted.",
+ "value": [
+  {
+   "Id": "don625",
+   "PublicationDate": "2026-11-06T17:27:28Z",
+   "UrlName": "2026-DON625",
+   "DonId": "2026-DON625",
+   "Title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo, Kenya and Nigeria",
+   "Summary": "<p>Since the publication of the previous Disease Outbreak News on 23 October 2026, the Bundibugyo virus disease (BVD) outbreak has expanded geographically in the Democratic Republic of the Congo.</p><p>While some areas have seen a slight decline in cases, sustained, high-level transmission continues overall in the Democratic Republic of the Congo. As of 3 November 2026, a total of 10 668 confirmed cases, including 5198 deaths (crude case fatality ratio: 48.7%), have been reported across 67 health zones in eight provinces, with active transmission ongoing in 51 health zones.</p>"
+  }
+ ]
+}
