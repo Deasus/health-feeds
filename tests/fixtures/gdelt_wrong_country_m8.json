@@ -1,0 +1,61 @@
+{
+ "_note": "GDELT headlines the evidence lane's M8 review (PULSE Web lane ev1, EVIDENCE.md defect 13) labelled 'wrong country' and that a headline rule can settle; `want` is the country list the rules must give. Headlines are their publishers'. Not here: headlines where a named country plays another role (departure point, collaborator, disputant), which no safe headline rule can tell apart; the curator's country decides those.",
+ "articles": [
+  {
+   "title": "Researcher Says Guinea - Bissau Newborn Hepatitis B Trial Will Not Proceed",
+   "url": "https://example.org/m8-1",
+   "domain": null,
+   "language": "English",
+   "sourcecountry": null,
+   "seendate": "20261111T000000Z",
+   "want": [
+    "GW"
+   ]
+  },
+  {
+   "title": "No vaccine for current Ebola outbreak - Africa CDC gives shocking reason - Latest News In Nigeria, Nigeria New",
+   "url": "https://example.org/m8-2",
+   "domain": null,
+   "language": "English",
+   "sourcecountry": null,
+   "seendate": "20261111T000000Z",
+   "want": []
+  },
+  {
+   "title": "Why our continent has no vaccine for latest Ebola strain – Africa CDC – The Sun Nigeria",
+   "url": "https://example.org/m8-3",
+   "domain": null,
+   "language": "English",
+   "sourcecountry": null,
+   "seendate": "20261111T000000Z",
+   "want": []
+  },
+  {
+   "title": "WHO warns more complex Ebola outbreak now present in 3 African countries - Dominican Republic Post – Caribbean News, Business, Travel & Cult",
+   "url": "https://example.org/m8-4",
+   "domain": null,
+   "language": "English",
+   "sourcecountry": null,
+   "seendate": "20261111T000000Z",
+   "want": []
+  },
+  {
+   "title": "Georgia sees 3 new measles cases as state triples total from last year",
+   "url": "https://example.org/m8-5",
+   "domain": null,
+   "language": "English",
+   "sourcecountry": null,
+   "seendate": "20261111T000000Z",
+   "want": []
+  },
+  {
+   "title": "Potential measles exposure noted at Geneva General Hospital",
+   "url": "https://example.org/m8-6",
+   "domain": null,
+   "language": "English",
+   "sourcecountry": null,
+   "seendate": "20261111T000000Z",
+   "want": []
+  }
+ ]
+}

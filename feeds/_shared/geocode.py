@@ -154,6 +154,8 @@ _US_CONTEXT = re.compile(r'\b(atlanta|savannah|cdc|u\.s\.|united states|georgia 
 # Names that contain a country's name but never mean that country (2026-11-25): blanked before matching, in every source.
 # ("Sudan virus disease – Uganda" is Uganda; Crimean-Congo haemorrhagic fever is not the Congo.)
 _NOT_A_COUNTRY = re.compile(r'\b(?:New Mexico|New Jersey|New South Wales|Sudan (?:virus|ebolavirus)|Crimean[- ]Congo)\b', re.I)
+# "Guinea - Bissau", "Guinea – Bissau" (GDELT spaces the hyphen): Guinea-Bissau, never Guinea (2026-11-25, EVIDENCE.md defect 13).
+_GW_SPACED = re.compile(r'\bGuinea\s*[-–—]\s*Bissau\b', re.I)
 # News headlines only (news=True): words that are also country names. Lower case, or followed by one of these words, they
 # are the bird, the pepper or the porcelain ("Christmas turkey supply", "Turkey farm in Minnesota").
 _COMMON_WORDS = {'turkey', 'chile', 'china'}
@@ -190,6 +192,7 @@ def find_countries(text: str, news: bool = False) -> list:
     if not text:
         return []
     text = _NOT_A_COUNTRY.sub(lambda m: ' ' * len(m.group(0)), text)      # same length: positions keep their order
+    text = _GW_SPACED.sub(lambda m: 'Guinea-Bissau'.ljust(len(m.group(0))), text)
     found = []
     for m in _RX.finditer(text):
         iso2 = _LOOKUP.get(m.group(1).lower())
@@ -201,7 +204,7 @@ def find_countries(text: str, news: bool = False) -> list:
         name = m.group(1)
         if name == 'Georgia' and (_US_CONTEXT.search(text) or (news and not _GE_CONTEXT.search(text))):
             continue
-        if name == 'Guinea' and re.search(r'guinea[- ]?(bissau|pig|worm)|new guinea|equatorial guinea', text, re.I):
+        if name == 'Guinea' and re.search(r'guinea\s*[-–—]?\s*(bissau|pig|worm)|new guinea|equatorial guinea', text, re.I):
             continue
         if name == 'Niger' and re.search(r'nigeria', text[m.start():m.start() + 8], re.I):
             continue
@@ -227,9 +230,11 @@ _OUTLET_WORDS = re.compile(r'\b(?:Observer|Post|Times|News|Herald|Tribune|Gazett
                            r'Telegraph|Guardian|Standard|Sun|Today|Online|Press|Agency|Insider|Monitor|Mirror|Independent|'
                            r'Reporter|Examiner|Record|Courier|Dispatch|Bulletin|Inquirer|Punch|Vanguard|Weekly|TV|Radio|FM|'
                            r'Broadcasting|Network|Media|Magazine|Wire|Newswire|Channel)\b')
-_NAME_WORD = re.compile(r"^(?:[A-Z0-9][\w.'’&-]*|of|the|and|&|de|la|el|du|del|al)$")
-_ATTRIBUTION = re.compile(r',\s*[^,]{2,60}?\s+(?:says|said|warns|warned|reports|reported|confirms|confirmed|announces|announced)'
-                          r'\.?\s*$', re.I)
+_NAME_WORD = re.compile(r"^(?:[A-Z0-9][\w.'’&-]*|of|the|and|&|de|la|el|du|del|al)[,;:]?$")     # "Nigeria," in a name
+# a trailing speaker: a capitalised name of one to four words right before the verb ("…, Switzerland says"), never a list
+# (", Niger and Chad - WHO says" keeps Niger and Chad)
+_ATTRIBUTION = re.compile(r",\s*(?:the\s+)?[A-Z][\w.'’-]*(?:\s+[A-Z][\w.'’-]*){0,3}\s+"
+                          r'(?:says|said|warns|warned|reports|reported|confirms|confirmed|announces|announced)\.?\s*$')
 
 
 def _key(s: str) -> str:

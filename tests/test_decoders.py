@@ -199,6 +199,22 @@ class GDELTTests(unittest.TestCase):
             self.assertEqual(e['countries'], a['want'], a['title'])
             self.assertEqual(e['country_code'], (a['want'] or [None])[0], a['title'])
 
+    def test_wrong_country_placements_m8(self):
+        """The M8 review's wrong-country headlines that a rule can settle, "Guinea - Bissau" first (defect 13, 2026-11-25)."""
+        mod = importlib.import_module('fetch_gdelt')
+        arts = load_json('gdelt_wrong_country_m8.json')['articles']
+        evs, _ = mod.decode(arts, NOW)
+        got = {e['title']: e['countries'] for e in evs}
+        for a in arts:
+            self.assertEqual(got.get(a['title'], []), a['want'], a['title'])
+        fc = lambda t: [c['iso2'] for c in geocode.find_countries(t)]
+        self.assertEqual(fc('Cholera in Guinea – Bissau and Senegal'), ['GW', 'SN'])                # every source
+        self.assertEqual(fc('Guinea-Bissau - Level 3: Reconsider Travel'), ['GW'])
+        self.assertEqual(fc('Ebola in Guinea'), ['GN'])
+        nc = lambda t: [c['iso2'] for c in geocode.news_countries(t)]
+        self.assertEqual(nc('Measles in Nigeria, Niger and Chad - WHO says'), ['NG', 'NE', 'TD'])   # a list is not a speaker
+        self.assertEqual(nc('Mpox in Kenya and Uganda, the Africa CDC says'), ['KE', 'UG'])
+
     def test_headline_rules(self):
         strip = geocode.strip_outlet
         self.assertEqual(strip('Nigeria Ebola case matches DR Congo strain - Jamaica Observer', 'www.jamaicaobserver.com'),
