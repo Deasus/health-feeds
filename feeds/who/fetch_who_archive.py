@@ -31,7 +31,8 @@ SPACING_S = 1.0
 # (~35 requests, as on the first walk) so stored rows are re-derived; until a walk reaches the end it is tried again.
 # 2 (2026-11-25): counts written with a space as the thousands separator ("10 668 confirmed cases" was stored as 668).
 # 3 (2026-11-25): names that contain a country but never mean it ("Sudan virus disease – Uganda" is Uganda, not Sudan).
-ROWS_VERSION = 3
+# 4 (2026-11-25): "Influenza A(H5N1)" is avian influenza (h5n1), not seasonal influenza (DON629).
+ROWS_VERSION = 4
 
 
 def compact(v: dict) -> dict:

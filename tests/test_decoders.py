@@ -65,6 +65,21 @@ class PathogenTests(unittest.TestCase):
         self.assertEqual(pathogens.primary('Chapare haemorrhagic fever - Bolivia')['slug'], 'chapare')
         self.assertEqual([p['slug'] for p in pathogens.find('bird flu and seasonal flu')], ['h5n1', 'influenza'])
         self.assertIsNone(pathogens.primary('Traffic safety in France'))
+
+    def test_avian_influenza_a_subtypes(self):
+        """WHO titles name the avian subtype after the word influenza: DON629 "Influenza A(H5N1) - United States of America"
+        was filed as seasonal influenza and paired with seasonal-flu wastewater (EVIDENCE.md defect 11; fixed 2026-11-25)."""
+        for t in ('Influenza A(H5N1) - United States of America', 'Influenza A (H5N1) – Cambodia', 'Influenza A(H9N2) - China',
+                  'Avian Influenza A(H7N9) - China', 'human infections with influenza A(H5) virus', 'Influenza A(H10N3) - China'):
+            self.assertEqual(pathogens.primary(t)['slug'], 'h5n1', t)
+        for t in ('Influenza A(H1N1)pdm09 - Brazil', 'Influenza A(H3N2) variant virus - USA', 'Seasonal influenza - Global'):
+            self.assertEqual(pathogens.primary(t)['slug'], 'influenza', t)
+        self.assertEqual([p['slug'] for p in pathogens.find('bird flu and seasonal flu')], ['h5n1', 'influenza'])
+        who = importlib.import_module('fetch_who')
+        ev = who.decode(load_json('who_don629.json'))[0]
+        self.assertEqual((ev['pathogen'], ev['pathogen_class'], ev['country_code']), ('h5n1', 'zoonotic', 'US'))
+        row = importlib.import_module('fetch_who_archive').compact(load_json('who_don629.json')['value'][0])
+        self.assertEqual((row['pathogen'], row['countries']), ('h5n1', ['US']))
         self.assertEqual(pathogens.primary('Melioidosis cluster linked to aromatherapy spray')['slug'], 'melioidosis')
         self.assertEqual(pathogens.primary('Glanders in horses: Burkholderia mallei confirmed')['slug'], 'glanders')
 

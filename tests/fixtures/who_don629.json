@@ -1,0 +1,13 @@
+{
+ "_note": "WHO DON 2026-DON629 (published 2026-11-24): title, date, ids and the first sentence of the summary as WHO wrote it, from PULSE's own copy (extract snapshot 2026-11-25T03:09Z). Other API fields omitted.",
+ "value": [
+  {
+   "Id": "don629",
+   "PublicationDate": "2026-11-24T10:52:39Z",
+   "UrlName": "2026-DON629",
+   "DonId": "2026-DON629",
+   "Title": "Influenza A(H5N1) - United States of America",
+   "Summary": "<p>Between 16 October and 4 November 2026, the United States of America, through its International Health Regulations (IHR) National Focal Point, notified WHO of three laboratory-confirmed human infections with influenza A(H5) virus in Washington State.</p>"
+  }
+ ]
+}

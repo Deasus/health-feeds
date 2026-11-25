@@ -18,7 +18,10 @@ PATHOGENS = [
     # slug, display name, class, aliases
     ('mers', 'MERS-CoV', 'viral', [r'mers(?:-cov)?', r'middle east respiratory syndrome', r'síndrome respiratorio de oriente medio',
                                     r'ميرس', r'كورونا الشرق الأوسط', r'中东呼吸综合征', r'中東呼吸症候群']),
-    ('h5n1', 'Avian influenza (H5N1)', 'zoonotic', [r'h5n1', r'h5n\d', r'h7n9', r'h9n2', r'avian (?:influenza|flu)', r'bird flu', r'hpai',
+    # "Influenza A(H5N1)", "influenza A(H5)", "Influenza A(H9N2)": avian subtypes named after the word influenza (WHO's titles).
+    # The alias starts where "influenza" starts, and a tie goes to h5n1 (2026-11-25: DON629 was filed as seasonal flu).
+    ('h5n1', 'Avian influenza (H5N1)', 'zoonotic', [r'influenza a\s*\(?\s*h(?:5|6|7|9|10)(?:n\d{1,2})?\s*\)?',
+                                                      r'h5n1', r'h5n\d', r'h7n9', r'h9n2', r'avian (?:influenza|flu)', r'bird flu', r'hpai',
                                                       r'highly pathogenic avian', r'high pathogenicity avian influenza',
                                                       r'influenza a viruses of high pathogenicity',
                                                       r'gripe aviar(?:ia)?', r'influenza aviar(?:ia)?', r'grippe aviaire', r'gripe aviária',
