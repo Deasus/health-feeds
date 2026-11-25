@@ -150,7 +150,9 @@ ReliefWeb feed), `ANTHROPIC_API_KEY` (enables the curator pass; set 2026-10-22).
   with a space, sometimes a no-break or thin space ("10 668 confirmed cases"); counts accept that as well as a comma
   (`events.counts_from_text`). `archive.json` carries `rows_version`: when the derivation changes, the next run re-walks the
   archive once so stored rows are re-derived.
-- **State Dept RSS** is ~600 KB for 222 items; health relevance comes from the bolded reasons.
+- **State Dept RSS** is ~600 KB for 222 items; health relevance comes from the bolded reasons. Each item's `pubDate` has
+  no time ("Wed, 21 Oct 2026"); `parse_date` reads it since 2026-11-25 (before, every advisory had `updated: null`). An
+  advisory is in force whatever its date, so the merge never drops it by age and counts it as current for corroboration.
 - **aphis.usda.gov** 403s browser-like User-Agents (Akamai) but serves the pipeline's own `health-feeds/1.0` UA; keep it.
 - **WAHIS** has no documented API: the list endpoint is a POST with the dashboard's filter body and `totalSize`; a report's
   `all-information` carries the coordinates. Details are cached in `wahis/reports.json` so each report is fetched once.

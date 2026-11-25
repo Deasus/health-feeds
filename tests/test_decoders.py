@@ -133,6 +133,19 @@ class StateDeptTests(unittest.TestCase):
         self.assertEqual(ev['severity_label'], 'MODERATE')
         self.assertIn('travel to Kenya', ev['headline'])           # strip_html keeps the space across <p>
 
+    def test_dated_by_pubdate(self):
+        """Each advisory keeps its own RSS date ('Mon, 19 Oct 2026', no time). Before 2026-11-25 all were updated: null."""
+        self.assertEqual(hf.parse_date('Wed, 21 Oct 2026'), datetime(2026, 10, 21, tzinfo=timezone.utc))
+        self.assertEqual(hf.parse_date('19 Oct 2026'), datetime(2026, 10, 19, tzinfo=timezone.utc))
+        mod = importlib.import_module('fetch_state')
+        advisories, items = mod.decode(ET.parse(fixture('state_advisories.xml')).getroot())
+        self.assertTrue(all(a['updated'] for a in advisories) and all(i['updated'] for i in items))
+        kenya = next(a for a in advisories if a['country'] == 'Kenya')
+        self.assertEqual(kenya['updated'], '2026-10-19')
+        self.assertEqual(next(i for i in items if i['country_code'] == 'KE')['updated'], '2026-10-19T00:00:00Z')
+        france = next(a for a in advisories if a['country'] == 'France')
+        self.assertEqual(france['updated'], '2026-10-21')
+
 
 class ECDCTests(unittest.TestCase):
     def test_decode(self):
@@ -278,9 +291,17 @@ class ExtractTests(unittest.TestCase):
                                  pathogen='measles', country_code='PE', lat=None, lng=None, geo_precision='none', source_id='n2')
         old = events.make(source='WHO DON', source_tier='official', kind='outbreak', title='Old cholera DON', updated=NOW - timedelta(days=200),
                           pathogen='cholera', country_code='YE', source_id='don0')
-        merged = mod.merge([who, news_corr, news_alone, old], NOW)
+        # a State Department advisory is in force whatever the date it was issued: never cut by the 45-day window
+        state = events.make(source='US State Department', source_tier='official', kind='advisory', title='Yemen - Level 4: Do Not Travel',
+                            updated=NOW - timedelta(days=200), pathogen='cholera', country_code='YE', severity=events.SEVERE, source_id='sd1')
+        merged = mod.merge([who, news_corr, news_alone, old, state], NOW)
         by_id = {e['id']: e for e in merged}
         self.assertNotIn(old['id'], by_id)
+        self.assertEqual(by_id[state['id']]['updated'], state['updated'])
+        self.assertEqual(by_id[state['id']]['cluster'], events.dedupe_key(dict(state, updated=hf.iso(NOW))))   # counts as current
+        yemen_news = events.make(source='GDELT', source_tier='news', kind='news', title='Cholera cases rise in Yemen', updated=NOW,
+                                 pathogen='cholera', country_code='YE', lat=None, lng=None, geo_precision='none', source_id='n3')
+        self.assertEqual(next(e for e in mod.merge([state, yemen_news], NOW) if e['source'] == 'GDELT')['corroboration'], 1)
         self.assertEqual(by_id[news_corr['id']]['corroboration'], 1)
         self.assertEqual(by_id[news_corr['id']]['severity_label'], 'MINOR')
         self.assertIsNotNone(by_id[news_corr['id']]['lat'])

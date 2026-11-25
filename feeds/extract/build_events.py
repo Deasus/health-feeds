@@ -3,7 +3,8 @@
 
 Reads each sibling feed's output (../<feed>/data/<file> on the same runner, else the published
 branch), then:
-  1. keeps events updated within WINDOW_DAYS (WHO DONs can be months old; the map wants recent);
+  1. keeps events updated within WINDOW_DAYS (WHO DONs can be months old; the map wants recent), and every State
+     Department advisory, which is in force whatever the date it was issued;
   2. counts corroboration: distinct non-news sources naming the same pathogen in the same country;
   3. applies the news rule: a GDELT headline is mapped (country centroid) and lifted to MINOR only
      when at least one non-news source corroborates it; otherwise it stays INFO and unmapped;
@@ -19,7 +20,7 @@ are placed at that city too.
 import re
 from collections import Counter, defaultdict
 from datetime import timedelta
-from hf import sibling_data, write_if_changed, envelope, parse_date, log, fail, now
+from hf import sibling_data, write_if_changed, envelope, parse_date, iso, log, fail, now
 import events, geocode, gazetteer, pathogens
 import llm_extract
 
@@ -31,6 +32,19 @@ SOURCES = [
 ]
 WINDOW_DAYS = 45
 CORROBORATION_DAYS = 21
+# Feeds that list only what is in force, dated when it was issued: kept whatever their date (2026-11-25). State Department
+# advisories carried no date before then, so the window never removed them; with their own date it must not either.
+IN_FORCE_SOURCES = {'US State Department'}
+
+
+def signal_time(ev, ref):
+    """When an event counts for corroboration and clustering: its own date, or `ref` for an advisory in force (as before
+    2026-11-25, when State advisories had no date; their date is shown, but they still count as current)."""
+    if ev.get('source') in IN_FORCE_SOURCES:
+        return ref
+    return parse_date(ev.get('updated')) or ref
+
+
 # A curator place that names a US county ("Chippewa County", "Orleans Parish"): resolved through counties.json when the
 # headline also names exactly one state (2026-11-02; before this, such items fell back to the country centroid).
 COUNTY_RX = re.compile(r'\b(county|parish|borough|census area)\b', re.I)
@@ -145,7 +159,7 @@ def merge(items, ref):
     kept = []
     for ev in items:
         when = parse_date(ev.get('updated'))
-        if when and when < cutoff:
+        if when and when < cutoff and ev.get('source') not in IN_FORCE_SOURCES:
             continue
         kept.append(ev)
     # corroboration index over non-news events
@@ -158,11 +172,11 @@ def merge(items, ref):
             continue            # an animal rabies or anthrax report is its own layer; only HPAI in animals corroborates "bird flu" headlines
         key = (ev['pathogen'], ev['country_code'])
         index[key].add(ev['source'])
-        stamps[key].append(parse_date(ev.get('updated')) or ref)
+        stamps[key].append(signal_time(ev, ref))
     for ev in kept:
         key = (ev['pathogen'], ev.get('country_code'))
         others = {s for s in index.get(key, set()) if s != ev['source']} if key[1] else set()
-        recent = any(abs(((parse_date(ev.get('updated')) or ref) - t).days) <= CORROBORATION_DAYS for t in stamps.get(key, []))
+        recent = any(abs((signal_time(ev, ref) - t).days) <= CORROBORATION_DAYS for t in stamps.get(key, []))
         ev['corroboration'] = len(others) if recent else 0
         if ev['source_tier'] == 'news':
             city = ev.pop('_city', None)
@@ -190,7 +204,7 @@ def merge(items, ref):
                 ev['lat'] = ev['lng'] = None
                 ev['geo_precision'] = 'none'
                 ev['geo_radius_km'] = None
-        ev['cluster'] = events.dedupe_key(ev)
+        ev['cluster'] = events.dedupe_key(ev if ev.get('source') not in IN_FORCE_SOURCES else dict(ev, onset=None, updated=iso(ref)))
     kept.sort(key=lambda e: e.get('updated') or '', reverse=True)     # newest first …
     kept.sort(key=lambda e: -e['severity'])                              # … within severity, high to low (stable)
     return kept

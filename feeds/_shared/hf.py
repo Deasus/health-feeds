@@ -189,8 +189,10 @@ def parse_date(s):
             return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
     except (TypeError, ValueError, IndexError):
         pass
+    # RFC 822 without a time ('Wed, 21 Oct 2026', the State Department's pubDate) fails parsedate_to_datetime: before
+    # 2026-11-25 every State advisory had updated: null.
     for fmt in ('%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%dT%H:%MZ', '%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f',
-                '%Y%m%dT%H%M%SZ', '%Y-%m-%d', '%Y%m%d', '%d %B %Y', '%B %d, %Y'):
+                '%Y%m%dT%H%M%SZ', '%Y-%m-%d', '%Y%m%d', '%d %B %Y', '%B %d, %Y', '%a, %d %b %Y', '%d %b %Y'):
         try:
             return datetime.strptime(s[:26] if '%f' in fmt else s, fmt).replace(tzinfo=timezone.utc)
         except ValueError:
