@@ -161,6 +161,44 @@ class GDELTTests(unittest.TestCase):
         flu_outbreak, _ = mod.decode([{'title': 'Flu outbreak closes three schools in Ohio', 'url': 'u2', 'seendate': '20261022T150000Z'}], NOW)
         self.assertEqual(flu_outbreak[0]['pathogen'], 'influenza')
 
+    def test_wrong_country_placements(self):
+        """The eight wrong-country board alerts of the 2026-11-14 review (fixed 2026-11-25): none of them may come back."""
+        mod = importlib.import_module('fetch_gdelt')
+        arts = load_json('gdelt_wrong_country.json')['articles']
+        evs, _ = mod.decode(arts, NOW)
+        self.assertEqual(len(evs), len(arts))
+        for a, e in zip(arts, evs):
+            self.assertEqual(e['countries'], a['want'], a['title'])
+            self.assertEqual(e['country_code'], (a['want'] or [None])[0], a['title'])
+
+    def test_headline_rules(self):
+        strip = geocode.strip_outlet
+        self.assertEqual(strip('Nigeria Ebola case matches DR Congo strain - Jamaica Observer', 'www.jamaicaobserver.com'),
+                         'Nigeria Ebola case matches DR Congo strain')
+        self.assertEqual(strip('Why our continent has no vaccine for latest Ebola strain – Africa CDC – The Sun Nigeria', 'thesun.ng'),
+                         'Why our continent has no vaccine for latest Ebola strain – Africa CDC')
+        self.assertEqual(strip('Cholera cases climb in Malawi - Kenya News Agency'), 'Cholera cases climb in Malawi')   # no domain: a newspaper word
+        keep = ['Measles outbreak in Texas - 12 new cases confirmed',                       # not a name: kept
+                'पाकिस्तान: पोलियो का नौवां मामला | Pakistan: Ninth polio case reported from Khyber Pakhtunkhwa',
+                'Ebola - Uganda']                                                        # under three words of headline: kept
+        for t in keep:
+            self.assertEqual(strip(t, 'example.com'), t)
+        nc = lambda t, d=None: [c['iso2'] for c in geocode.news_countries(t, d)]
+        self.assertEqual(nc('Turkey farm in Minnesota hit by bird flu'), [])
+        self.assertEqual(nc('Michigan turkey growers fight diseases'), [])
+        self.assertEqual(nc('Turkey reports first H5N1 case in humans'), ['TR'])
+        self.assertEqual(nc('Georgia sees 3 new measles cases as state triples total from last year'), [])
+        self.assertEqual(nc('Anthrax outbreak in Georgia: Tbilisi hospital treats 4'), ['GE'])
+        self.assertEqual(nc('Cholera kills 12 in the north, Malawi says'), ['MW'])           # the only country: a speaker stays
+        self.assertEqual(nc('Crimean-Congo haemorrhagic fever cases rise in Iraq'), ['IQ'])
+        # every source: names that contain a country's name but never mean it
+        fc = lambda t: [c['iso2'] for c in geocode.find_countries(t)]
+        self.assertEqual(fc('Sudan virus disease - Uganda'), ['UG'])
+        self.assertEqual(fc('Measles in New Mexico and New Jersey'), [])
+        self.assertEqual(fc('Dengue in New South Wales, Australia'), ['AU'])
+        self.assertEqual(fc('Cholera - Sudan'), ['SD'])
+        self.assertEqual(fc('Middle East respiratory syndrome coronavirus - Turkey'), ['TR'])   # official text: unchanged
+
 
 class FDATests(unittest.TestCase):
     def test_decode(self):
@@ -332,9 +370,31 @@ class CuratorTests(unittest.TestCase):
                 arr.append({'i': h['i'], 'outbreak': True, 'pathogen': 'measles', 'country': 'US', 'place': 'Chippewa County, Wisconsin', 'cases': 33, 'deaths': None, 'quote': 'Cases Reach 33'})
             elif 'stanislaus' in t:      # and the county alone, the state only in the headline
                 arr.append({'i': h['i'], 'outbreak': True, 'pathogen': 'mpox', 'country': 'US', 'place': 'Stanislaus County', 'cases': None, 'deaths': None, 'quote': None})
+            elif 'lebanon, ohio' in t:   # the headline rules read Lebanon; the curator says where the cases are
+                arr.append({'i': h['i'], 'outbreak': True, 'pathogen': 'measles', 'country': 'US', 'place': None, 'cases': None, 'deaths': None, 'quote': None})
             else:
                 arr.append({'i': h['i'], 'outbreak': True, 'pathogen': None, 'country': None, 'place': None, 'cases': None, 'deaths': None, 'quote': None})
         return arr, {'input_tokens': 10, 'output_tokens': 10}
+
+    def test_curator_country_wins(self):
+        """2026-11-25: the curator's country replaces the one the headline rules read; without one, the rules' list stays."""
+        llm = importlib.import_module('llm_extract'); be = importlib.import_module('build_events')
+        saved = llm.CACHE_FILE
+        try:
+            llm.CACHE_FILE = os.path.join(tempfile.mkdtemp(), 'llm_cache.json')
+            mk = lambda title, sid: events.make(source='GDELT', source_tier='news', kind='news', title=title, updated=NOW, pathogen='measles',
+                                                country_code=(geocode.news_countries(title) or [{'iso2': None}])[0]['iso2'],
+                                                countries=[c['iso2'] for c in geocode.news_countries(title)], lat=None, lng=None,
+                                                geo_precision='none', source_id=sid)
+            oh = mk('Measles case confirmed in Lebanon, Ohio school district', 'g1')
+            ng = mk('Measles outbreak spreads in Nigeria and Niger', 'g2')
+            self.assertEqual((oh['countries'], ng['countries']), (['LB'], ['NG', 'NE']))
+            items = be.enrich_news([oh, ng], NOW, call=self.fake_call)
+            oh, ng = items
+            self.assertEqual((oh['country_code'], oh['countries'], oh['area']), ('US', ['US'], 'United States'))
+            self.assertEqual((ng['country_code'], ng['countries']), ('NG', ['NG', 'NE']))      # the curator gave none: unchanged
+        finally:
+            llm.CACHE_FILE = saved
 
     def test_enrich_and_merge(self):
         import os, tempfile

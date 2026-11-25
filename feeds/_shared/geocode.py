@@ -151,6 +151,18 @@ def _patterns():
 _RX, _LOOKUP = _patterns()
 _GUARD_RX = re.compile(r'\b(' + '|'.join(_GUARDED) + r')\b')
 _US_CONTEXT = re.compile(r'\b(atlanta|savannah|cdc|u\.s\.|united states|georgia department|georgia dph|gdph)\b', re.I)
+# Names that contain a country's name but never mean that country (2026-11-25): blanked before matching, in every source.
+# ("Sudan virus disease – Uganda" is Uganda; Crimean-Congo haemorrhagic fever is not the Congo.)
+_NOT_A_COUNTRY = re.compile(r'\b(?:New Mexico|New Jersey|New South Wales|Sudan (?:virus|ebolavirus)|Crimean[- ]Congo)\b', re.I)
+# News headlines only (news=True): words that are also country names. Lower case, or followed by one of these words, they
+# are the bird, the pepper or the porcelain ("Christmas turkey supply", "Turkey farm in Minnesota").
+_COMMON_WORDS = {'turkey', 'chile', 'china'}
+_NOT_PLACE_AFTER = re.compile(r'\s+(?:farms?|flocks?|growers?|producers?|supply|supplies|industry|meat|prices?|breeders?|'
+                              r'hatcher(?:y|ies)|plants?|processing|processors?|barns?|operations?|poults?|dinners?|day|eggs?|'
+                              r'birds?|hens?|toms?|shortages?|peppers?|powder|con carne|dishes|plates?|cups?)\b', re.I)
+# News headlines only: "Georgia" is the country only with something that says so (it is far more often the U.S. state).
+_GE_CONTEXT = re.compile(r'\b(tbilisi|batumi|kutaisi|rustavi|zugdidi|caucasus|abkhazia|south ossetia|adjara|'
+                         r'republic of georgia|georgian government|georgian ministry|georgian authorities)\b', re.I)
 
 
 def country(code_or_name: str):
@@ -172,18 +184,22 @@ def country(code_or_name: str):
     return _C.get(iso2)
 
 
-def find_countries(text: str) -> list:
-    """Countries named in text, in order of first appearance, de-duplicated."""
+def find_countries(text: str, news: bool = False) -> list:
+    """Countries named in text, in order of first appearance, de-duplicated. news=True adds the stricter rules for
+    headlines (common words that are country names, Georgia only with country context); see news_countries()."""
     if not text:
         return []
+    text = _NOT_A_COUNTRY.sub(lambda m: ' ' * len(m.group(0)), text)      # same length: positions keep their order
     found = []
     for m in _RX.finditer(text):
         iso2 = _LOOKUP.get(m.group(1).lower())
+        if news and m.group(1).lower() in _COMMON_WORDS and (m.group(1).islower() or _NOT_PLACE_AFTER.match(text, m.end())):
+            continue
         if iso2 and iso2 in _C:
             found.append((m.start(), iso2))
     for m in _GUARD_RX.finditer(text):
         name = m.group(1)
-        if name == 'Georgia' and _US_CONTEXT.search(text):
+        if name == 'Georgia' and (_US_CONTEXT.search(text) or (news and not _GE_CONTEXT.search(text))):
             continue
         if name == 'Guinea' and re.search(r'guinea[- ]?(bissau|pig|worm)|new guinea|equatorial guinea', text, re.I):
             continue
@@ -198,6 +214,68 @@ def find_countries(text: str) -> list:
             seen.add(iso2)
             out.append(_C[iso2])
     return out
+
+
+# ── news headlines (GDELT, Google News), 2026-11-25 ─────────────────────────────────────────────────────────────
+# The evidence review of 48 board alerts (2026-11-14) found 8 in the wrong country: the outlet's name read as a place
+# ("… - Jamaica Observer", "| The Peninsula Qatar", "- Dominican Republic Post – Caribbean News…"), a speaker
+# ("…, Switzerland says"), "Christmas turkey", and the U.S. state of Georgia. The rules below are conservative on
+# purpose: a missed placement is better than a wrong one (the curator, or a later official report, can still place it).
+
+_SEP_RX = re.compile(r'\s+(\||-|–|—|::)\s+')
+_OUTLET_WORDS = re.compile(r'\b(?:Observer|Post|Times|News|Herald|Tribune|Gazette|Daily|Journal|Chronicle|Star|Express|Mail|'
+                           r'Telegraph|Guardian|Standard|Sun|Today|Online|Press|Agency|Insider|Monitor|Mirror|Independent|'
+                           r'Reporter|Examiner|Record|Courier|Dispatch|Bulletin|Inquirer|Punch|Vanguard|Weekly|TV|Radio|FM|'
+                           r'Broadcasting|Network|Media|Magazine|Wire|Newswire|Channel)\b')
+_NAME_WORD = re.compile(r"^(?:[A-Z0-9][\w.'’&-]*|of|the|and|&|de|la|el|du|del|al)$")
+_ATTRIBUTION = re.compile(r',\s*[^,]{2,60}?\s+(?:says|said|warns|warned|reports|reported|confirms|confirmed|announces|announced)'
+                          r'\.?\s*$', re.I)
+
+
+def _key(s: str) -> str:
+    return re.sub(r'[^a-z0-9]', '', (s or '').lower())
+
+
+def _host_key(domain: str) -> str:
+    """'www.jamaicaobserver.com' → 'jamaicaobserver' (the longest label: the outlet's own name)."""
+    labels = [x for x in re.sub(r'^https?://', '', (domain or '').lower()).split('/')[0].split('.') if x and x != 'www']
+    return _key(max(labels, key=len)) if labels else ''
+
+
+def strip_outlet(title: str, domain: str = None) -> str:
+    """The headline without an outlet's name appended to it. A trailing part after ' | ', ' - ', ' – ', ' — ' or ' :: ' is
+    the outlet when it matches the article's domain ("Jamaica Observer" for jamaicaobserver.com), or when it is a name in
+    title case that follows ' | ' (at most 8 words) or carries a newspaper word ("Kenya News Agency", at most 6 words). The
+    outlet and everything after it go; at least three words of headline always stay."""
+    t = title or ''
+    host = _host_key(domain) if domain and '.' in domain else _key(domain)
+    for m in _SEP_RX.finditer(t):
+        head, tail = t[:m.start()].rstrip(), t[m.end():]
+        if len(head.split()) < 3:
+            continue
+        seg = _SEP_RX.split(tail, 1)[0].strip()
+        sk, words = _key(seg), seg.split()
+        name = 1 <= len(words) <= 8 and all(_NAME_WORD.match(w) for w in words)      # an outlet's name is in title case
+        if host and len(sk) >= 4 and len(host) >= 4 and (sk in host or (sk.startswith('the') and sk[3:] in host)
+                                                         or (name and host in sk)):
+            return head
+        if name and (m.group(1) == '|' or (len(words) <= 6 and _OUTLET_WORDS.search(seg))):
+            return head
+    return t
+
+
+def news_countries(title: str, domain: str = None) -> list:
+    """Countries a news headline places its story in: the outlet's name removed (strip_outlet), the stricter headline
+    rules of find_countries(news=True), and a trailing speaker dropped when another country remains ("Ebola patient in
+    Nigeria believed to have contracted disease in Uganda, Switzerland says" → Nigeria, Uganda)."""
+    head = strip_outlet(title, domain)
+    found = find_countries(head, news=True)
+    attr = _ATTRIBUTION.search(head)
+    if attr and len(found) > 1:
+        before = find_countries(head[:attr.start()], news=True)
+        if before:
+            found = before
+    return found
 
 
 def radius_km(bbox):

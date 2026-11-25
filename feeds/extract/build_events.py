@@ -57,7 +57,7 @@ def enrich_news(items, ref, call=None):
         return items
     results = llm_extract.enrich([e['title'] for e in news], call=call)
     kept = []
-    dropped = filled = placed = 0
+    dropped = filled = placed = overridden = 0
     for e in items:
         if e['source_tier'] != 'news':
             kept.append(e)
@@ -73,7 +73,11 @@ def enrich_news(items, ref, call=None):
             p = pathogens.BY_SLUG[r['pathogen']]
             e['pathogen'], e['pathogen_name'], e['pathogen_class'] = p['slug'], p['name'], p['cls']
             filled += 1
-        if r['country'] and not e.get('country_code') and geocode.country(r['country']):
+        if r['country'] and r['country'] != e.get('country_code') and geocode.country(r['country']):
+            # The curator's country wins (2026-11-25): it is asked for the place where the cases are, never the outlet's
+            # country, and it reads the whole headline. When it disagrees with the headline rules, their list is dropped.
+            if e.get('country_code'):
+                overridden += 1
             e['country_code'] = r['country']
             e['countries'] = [r['country']]
             e['region'] = geocode.area_of(r['country'])
@@ -113,7 +117,8 @@ def enrich_news(items, ref, call=None):
             e['cases'], e['deaths'], e['cases_quote'] = r['cases'], r['deaths'], r['quote']
         e['tags'] = sorted(set(e.get('tags', [])) | {'llm-extracted'})
         kept.append(e)
-    log(f'  curator: {len(news)} headlines, {dropped} not outbreak news, {filled} fields filled, {placed} city places found')
+    log(f'  curator: {len(news)} headlines, {dropped} not outbreak news, {filled} fields filled ({overridden} countries corrected), '
+        f'{placed} city places found')
     return kept
 
 

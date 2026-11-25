@@ -108,7 +108,14 @@ is recognised in its own language, and the Haiku curator confirms it and fills t
 No upstream except CDC NNDSS ships coordinates. `feeds/_shared/geocode.py` resolves country names,
 aliases and ISO2/ISO3 codes to Natural Earth centroids (`centroids.py`, generated from CINDER
 Mobile's `boundaries.json` by `tools/build_centroids.py`), plus US/CA/AU states and a few overseas
-territories. `geo_precision` says how far to trust a point; the app should draw country-precision
+territories. Names that contain a country's name but never mean it are skipped everywhere ("Sudan virus", "Crimean-Congo",
+New Mexico, New Jersey, New South Wales). News headlines (GDELT, Google News) go through `geocode.news_countries` (2026-11-25,
+after 8 of 48 board alerts named the wrong country): the outlet's name appended to the headline is removed (" - Jamaica
+Observer", " | The Peninsula Qatar"; matched against the article's domain, or a title-case name after " | " or with a
+newspaper word), a trailing speaker is dropped when another country remains ("…, Switzerland says"), "turkey", "chile" and
+"china" are places only when capitalised and not followed by farm/supply/growers…, and "Georgia" is the country only with
+Tbilisi, the Caucasus or the like in the headline. A missed placement is preferred to a wrong one: the curator's country,
+when it gives one, replaces whatever the headline rules read. `geo_precision` says how far to trust a point; the app should draw country-precision
 events at the centroid with a precision ring, never as a pin. US counties (APHIS, WHISPers) come from the Census
 gazetteer (`counties.json`, `tools/build_counties.py`, 3,222 counties): a `point` at the county centroid with
 `geo_radius_km` = half the square root of the county's area. WAHIS events sit at the mean of their outbreak coordinates

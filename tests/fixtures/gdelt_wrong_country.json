@@ -1,0 +1,92 @@
+{
+ "_note": "Eight GDELT headlines the 2026-11-14 alert review (PULSE Web EVIDENCE.md, label B) found placed in the wrong country, as GDELT served them (title, domain, publisher country). `want` is the country list the headline rules must give: the outlet's name, a trailing speaker, 'Christmas turkey' and the U.S. state of Georgia are not places. Headlines are their publishers'.",
+ "articles": [
+  {
+   "title": "Nigeria Ebola case matches DR Congo strain - Jamaica Observer",
+   "url": "https://jamaicaobserver.com/article-1",
+   "domain": "jamaicaobserver.com",
+   "language": "English",
+   "sourcecountry": "Jamaica",
+   "seendate": "20261022T180000Z",
+   "want": [
+    "NG",
+    "CD"
+   ]
+  },
+  {
+   "title": "DR Congo launches major Ebola vaccine trial amid outbreak | The Peninsula Qatar",
+   "url": "https://thepeninsulaqatar.com/article-2",
+   "domain": "thepeninsulaqatar.com",
+   "language": "English",
+   "sourcecountry": "Qatar",
+   "seendate": "20261022T180000Z",
+   "want": [
+    "CD"
+   ]
+  },
+  {
+   "title": "Dengue cases rise to 70 in Pakistan Rawalpindi | The Peninsula Qatar",
+   "url": "https://thepeninsulaqatar.com/article-3",
+   "domain": "thepeninsulaqatar.com",
+   "language": "English",
+   "sourcecountry": "Qatar",
+   "seendate": "20261022T180000Z",
+   "want": [
+    "PK"
+   ]
+  },
+  {
+   "title": "Kenya says 6 Ebola patients recover, 1 under treatment | The Peninsula Qatar",
+   "url": "https://thepeninsulaqatar.com/article-4",
+   "domain": "thepeninsulaqatar.com",
+   "language": "English",
+   "sourcecountry": "Qatar",
+   "seendate": "20261022T180000Z",
+   "want": [
+    "KE"
+   ]
+  },
+  {
+   "title": "Nigeria first Ebola case matches DR Congo strain, health officials say - Dominican Republic Post – Caribbean News, Business, Travel & Cultur",
+   "url": "https://dominicanrepublicpost.com/article-5",
+   "domain": "dominicanrepublicpost.com",
+   "language": "English",
+   "sourcecountry": "Dominican Republic",
+   "seendate": "20261022T180000Z",
+   "want": [
+    "NG",
+    "CD"
+   ]
+  },
+  {
+   "title": "Ebola patient in Nigeria believed to have contracted disease in Uganda, Switzerland says",
+   "url": "https://cyprus-mail.com/article-6",
+   "domain": "cyprus-mail.com",
+   "language": "English",
+   "sourcecountry": "Cyprus",
+   "seendate": "20261022T180000Z",
+   "want": [
+    "NG",
+    "UG"
+   ]
+  },
+  {
+   "title": "Bird flu outbreak sparks fears for Christmas turkey supply as 32, 000 birds culled",
+   "url": "https://aol.co.uk/article-7",
+   "domain": "aol.co.uk",
+   "language": "English",
+   "sourcecountry": "United Kingdom",
+   "seendate": "20261022T180000Z",
+   "want": []
+  },
+  {
+   "title": "UPDATE: DPH says 3 new Macon County measles cases raise Georgia total to 28",
+   "url": "https://41nbc.com/article-8",
+   "domain": "41nbc.com",
+   "language": "English",
+   "sourcecountry": "United States",
+   "seendate": "20261022T180000Z",
+   "want": []
+  }
+ ]
+}

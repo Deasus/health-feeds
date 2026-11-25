@@ -73,7 +73,7 @@ def decode(rows, fetched_at):
             continue
         if not (pathogens.is_outbreak_language(title) or pathogen['slug'] not in ('influenza', 'covid19', 'tb', 'malaria')):
             continue
-        countries = geocode.find_countries(title)
+        countries = geocode.news_countries(title, a.get('domain'))
         c = countries[0] if countries else None
         evs.append(events.make(
             source='Google News', source_tier='news', kind='news', severity=events.INFO, title=title, pathogen=pathogen,

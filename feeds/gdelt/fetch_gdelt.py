@@ -4,7 +4,8 @@
 Upstream (verified 2026-10-22): api.gdeltproject.org/api/v2/doc/doc. The server asks for one request
 every 5 seconds; this fetcher spaces queries 6 s apart and waits 15 s once on a 429. GKG theme filters
 work (theme:TAX_DISEASE_*). GEO 2.0 is dead, so articles carry no geography beyond the publisher's
-country; countries and pathogens are read from the title. Headlines are outlet-owned: title, domain
+country; countries and pathogens are read from the title (geocode.news_countries: never the outlet's name appended to
+it, a trailing speaker, or a common word such as "turkey"). Headlines are outlet-owned: title, domain
 and URL only. News events stay unmapped (lat/lng null, INFO) until build_events.py finds a
 non-news source for the same pathogen and country.
 
@@ -66,7 +67,7 @@ def decode(articles, fetched_at):
             continue
         if not (pathogens.is_outbreak_language(title) or pathogen['slug'] not in ('influenza', 'covid19', 'tb', 'malaria')):
             continue                                # generic flu/covid/TB/malaria chatter needs outbreak language
-        countries = geocode.find_countries(title)
+        countries = geocode.news_countries(title, a.get('domain'))      # not the outlet's name, a speaker, or "turkey"
         c = countries[0] if countries else None
         evs.append(events.make(
             source='GDELT', source_tier='news', kind='news', severity=events.INFO, title=title, headline=None, body=None,
