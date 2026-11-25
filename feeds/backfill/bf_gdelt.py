@@ -10,6 +10,12 @@ How it treats GDELT (README "Known sensitivities", and the live fetcher's own ru
 - On 429 (or GDELT's "limit requests" text) it waits 15, 30, then 60 s; after three in a row it ends the burst and waits
   for the next offset. Every answer is checkpointed, so nothing already fetched is lost: it keeps what it has.
 - At most GDELT_MAX_REQUESTS (default 1,000) per leg, inside the leg's time budget. A later leg resumes.
+- Never while the live conductor's own GDELT run is due, running or just ended (ConductorGuard, 2026-11-25). The conductor
+  runs `gdelt` every 1,800 s from its own start, not at fixed minutes, and a run can last up to its 900 s timeout, so a
+  :05/:35 burst could otherwise overlap it. Before every request the guard reads the conductor's status.json (the
+  `status` branch of this repository, never an upstream) and allows a request only when the status is fresh (≤ 10 min),
+  gdelt is not running, its last run ended ≥ 60 s ago, and its next run cannot start within 150 s (the 90 s request
+  timeout plus 60 s). Otherwise it waits inside the burst. Unreadable status means wait: it fails closed.
 
 What it asks:
 - First a **probe** (PLAN EV "How far back M1 can go"): one 1-day query for theme:TAX_DISEASE_OUTBREAK at 85, 92, 100,
@@ -27,8 +33,9 @@ is the union of the slices that were answered; a pathogen is covered by the quer
 """
 import json
 import os
+import subprocess
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 from hf import get, HFError, parse_date
 import fetch_gdelt
@@ -145,6 +152,76 @@ def next_burst(t):
     return min(s for s in starts if s > t)
 
 
+# ── the live conductor's GDELT run: never overlap it ────────────────────────────────────────────────────────────────
+
+CONDUCTOR_EVERY_S = int(os.environ.get('CONDUCTOR_GDELT_EVERY_S', '1800'))   # feeds.py FEEDS['gdelt']['every'] (a test keeps them equal)
+GUARD_LEAD_S = 150         # no request this close to the conductor's next GDELT run: the 90 s request timeout + 60 s
+GUARD_AFTER_S = 60         # nor this soon after its last run ended
+GUARD_STALE_S = 600        # status older than two of its 300 s publishes: the conductor may be between chain links
+GUARD_HOLD_S = 60          # how long to wait before reading the status again when it says nothing better
+REQUEST_TIMEOUT_S = 90
+
+
+def conductor_window(status, t):
+    """(clear, reason, seconds). clear: the conductor's GDELT run cannot overlap a request sent at t; seconds is then how
+    long the clearance lasts, else how long to wait before asking again. Fails closed on anything unreadable."""
+    g = ((status or {}).get('feeds') or {}).get('gdelt') if isinstance(status, dict) else None
+    if not g:
+        return False, 'conductor status unreadable', GUARD_HOLD_S
+    gen = parse_date(status.get('generated_at'))
+    if not gen or (t - gen).total_seconds() > GUARD_STALE_S:
+        return False, 'conductor status stale (between chain links?)', GUARD_HOLD_S
+    if g.get('running'):
+        return False, 'conductor GDELT run in progress', GUARD_HOLD_S
+    ts = g.get('last_start_ts')
+    start = datetime.fromtimestamp(ts, timezone.utc) if isinstance(ts, (int, float)) else parse_date(g.get('last_start'))
+    end = parse_date(g.get('last_end'))
+    if not start or not end or end < start.replace(microsecond=0):
+        return False, 'conductor GDELT times unreadable', GUARD_HOLD_S
+    after = end + timedelta(seconds=GUARD_AFTER_S)
+    if t < after:
+        return False, 'conductor GDELT run just ended', max(1.0, (after - t).total_seconds())
+    nxt = start + timedelta(seconds=CONDUCTOR_EVERY_S)
+    stop = nxt - timedelta(seconds=GUARD_LEAD_S)
+    if t >= stop:
+        return False, 'conductor GDELT run due', max(GUARD_HOLD_S, (nxt - t).total_seconds() + GUARD_AFTER_S)
+    return True, 'clear', (stop - t).total_seconds()
+
+
+def read_conductor_status():
+    """The conductor's status.json from this repository's `status` branch (git, the way conductor.restore reads a branch).
+    BACKFILL_REPO_ROOT is set by run.py; without it, or on any error, None (the guard then holds)."""
+    root = os.environ.get('BACKFILL_REPO_ROOT')
+    if not root:
+        return None
+    try:
+        r = subprocess.run(['git', '-C', root, 'fetch', '--quiet', '--depth', '1', 'origin', '+refs/heads/status:refs/remotes/origin/status'],
+                           capture_output=True, text=True, timeout=60)
+        if r.returncode != 0:
+            return None
+        r = subprocess.run(['git', '-C', root, 'show', 'refs/remotes/origin/status:status.json'], capture_output=True, text=True, timeout=30)
+        return json.loads(r.stdout) if r.returncode == 0 else None
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+
+
+class ConductorGuard:
+    """guard(t) → (clear, reason, seconds). Re-reads the status every refresh_s while clear, and every call when not."""
+
+    def __init__(self, read=None, refresh_s=GUARD_HOLD_S):
+        self.read = read or (lambda: read_conductor_status())          # looked up at call time (tests replace it)
+        self.refresh_s = refresh_s
+        self.status, self.read_at = None, None
+
+    def __call__(self, t):
+        if self.read_at is None or (t - self.read_at).total_seconds() >= self.refresh_s:
+            self.status, self.read_at = self.read(), t
+        clear, reason, secs = conductor_window(self.status, t)
+        if not clear:
+            self.read_at = None
+        return clear, reason, secs
+
+
 # ── the plan ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 def make_queries(themes=None):
@@ -176,8 +253,9 @@ def parse_themes(text: str) -> set:
     return {ln.split('\t')[0].strip() for ln in text.splitlines() if ln.strip()}
 
 
-def run(since, until=None, budget=None, fetch_json=fetch, fetch_text=None, wall=now, sleep=time.sleep, max_requests=None):
+def run(since, until=None, budget=None, fetch_json=fetch, fetch_text=None, wall=now, sleep=time.sleep, max_requests=None, guard=None):
     budget = budget or Budget(max_requests=max_requests if max_requests is not None else MAX_REQUESTS)
+    guard = guard or ConductorGuard()
     st = load_state(SLUG, {'source': SOURCE, 'class': 'news', 'date_field': 'seendate', 'since': None, 'until': None, 'probe': None,
                            'reach': None, 'themes_checked': False, 'queries': None, 'tasks': None, 'requests': 0,
                            'rate_limited': 0, 'failures': 0, 'bursts': 0, 'notes': []})
@@ -191,6 +269,9 @@ def run(since, until=None, budget=None, fetch_json=fetch, fetch_text=None, wall=
     st['until'] = iso(until)
     st['requested'] = {'since': iso(since), 'until': iso(until)}
     st['slots'] = {'minutes': list(SLOT_MINUTES), 'burst_s': BURST_S, 'spacing_s': SPACING_S}
+    st['guard'] = {'conductor_every_s': CONDUCTOR_EVERY_S, 'lead_s': GUARD_LEAD_S, 'after_s': GUARD_AFTER_S, 'stale_s': GUARD_STALE_S,
+                   'holds': (st.get('guard') or {}).get('holds', 0), 'held_s': (st.get('guard') or {}).get('held_s', 0),
+                   'reasons': (st.get('guard') or {}).get('reasons', {})}
     fetch_text = fetch_text or (lambda url: get(url, timeout=90, retries=0).decode('utf-8', 'replace'))
     leg = {'requests': 0}
 
@@ -224,6 +305,15 @@ def run(since, until=None, budget=None, fetch_json=fetch, fetch_text=None, wall=
             step = next_step()
             if step is None:
                 return
+            clear, why, secs = guard(wall())
+            if not clear:                       # the conductor's own GDELT run is due, running or just ended: wait in the burst
+                wait = max(1.0, min(secs, (win[1] - wall()).total_seconds()))
+                g = st['guard']
+                g['holds'] += 1
+                g['held_s'] = round(g['held_s'] + wait)
+                g['reasons'][why] = g['reasons'].get(why, 0) + 1
+                sleep(wait)
+                continue
             kind, payload = step
             try:
                 if kind == 'probe':
@@ -337,8 +427,10 @@ def run(since, until=None, budget=None, fetch_json=fetch, fetch_text=None, wall=
     st['requests_this_leg'] = leg['requests']
     save()
     log(f'GDELT backfill: reach {st["reach"]}, {len(tasks)} slices ({todo} to do, {failed} failed), {len(items)} items, '
-        f'{leg["requests"]} requests this leg, {st["rate_limited"]} rate-limited, {st["status"]}')
+        f'{leg["requests"]} requests this leg, {st["rate_limited"]} rate-limited, {st["status"]}; held for the conductor '
+        f'{st["guard"]["holds"]} times ({st["guard"]["held_s"]} s): {st["guard"]["reasons"]}')
     return st, items
 
 
-__all__ = ['run', 'url_for', 'burst_window', 'next_burst', 'make_queries', 'make_plan', 'parse_themes', 'QUERIES', 'SLUG', 'SOURCE', 'RateLimited']
+__all__ = ['run', 'url_for', 'burst_window', 'next_burst', 'make_queries', 'make_plan', 'parse_themes', 'QUERIES', 'SLUG', 'SOURCE', 'RateLimited',
+           'ConductorGuard', 'conductor_window', 'read_conductor_status']

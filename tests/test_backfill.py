@@ -77,8 +77,13 @@ class Sandbox(unittest.TestCase):
                 if hasattr(mod, name):
                     self.saved.append((mod, name, getattr(mod, name)))
                     setattr(mod, name, no_network)
+        self.saved.append((bf_gdelt, 'read_conductor_status', bf_gdelt.read_conductor_status))
+        bf_gdelt.read_conductor_status = no_network                  # a GDELT test must bring its own conductor guard
+        self.repo_root = os.environ.pop('BACKFILL_REPO_ROOT', None)
 
     def tearDown(self):
+        if self.repo_root is not None:
+            os.environ['BACKFILL_REPO_ROOT'] = self.repo_root
         for mod, name, v in self.saved:
             setattr(mod, name, v)
         self.tmp.cleanup()
@@ -295,6 +300,9 @@ class ReliefWebBackfillTests(Sandbox):
         self.assertEqual((ev['updated'], ev['bf']['changed'][:10], ev['pathogen'], ev['country_code']), ('2025-01-30T00:00:00Z', '2026-03-01', 'ebola', 'UG'))
 
 
+CLEAR = lambda t: (True, 'test: no conductor', 10 ** 9)      # the guard for tests about pacing within a burst
+
+
 class GDELTBackfillTests(Sandbox):
     UNTIL = datetime(2026, 11, 14, tzinfo=UTC)
     SINCE = datetime(2026, 11, 1, tzinfo=UTC)
@@ -373,7 +381,7 @@ class GDELTBackfillTests(Sandbox):
     def test_probe_slices_split_and_pacing(self):
         clock, sent, wall, sleep, fetch_json, fetch_text = self.harness(rate_limits_at=(6, 7, 8))
         st, items = bf_gdelt.run(self.SINCE, self.UNTIL, budget=bf_common.Budget(seconds=10 ** 9, max_requests=500, clock=lambda: 0),
-                                 fetch_json=fetch_json, fetch_text=fetch_text, wall=wall, sleep=sleep)
+                                 fetch_json=fetch_json, fetch_text=fetch_text, wall=wall, sleep=sleep, guard=CLEAR)
         # probe: 85 and 92 days back answer, 100 is empty → reach 92 days back
         self.assertEqual([(p['days_back'], bool(p['articles'])) for p in st['probe']], [(85, True), (92, True), (100, False)])
         self.assertEqual(st['reach'], '2026-08-14T00:00:00Z')
@@ -405,13 +413,85 @@ class GDELTBackfillTests(Sandbox):
     def test_budget_then_resume(self):
         clock, sent, wall, sleep, fetch_json, fetch_text = self.harness(first_slice_full=False)
         bud = lambda n: bf_common.Budget(seconds=10 ** 9, max_requests=n, clock=lambda: 0)
-        st, items = bf_gdelt.run(self.SINCE, self.UNTIL, budget=bud(6), fetch_json=fetch_json, fetch_text=fetch_text, wall=wall, sleep=sleep)
+        st, items = bf_gdelt.run(self.SINCE, self.UNTIL, budget=bud(6), fetch_json=fetch_json, fetch_text=fetch_text, wall=wall, sleep=sleep, guard=CLEAR)
         self.assertEqual((st['status'], st['resumable']), ('partial', True))
         n1 = len(sent)
-        st, items = bf_gdelt.run(self.SINCE, self.UNTIL, budget=bud(500), fetch_json=fetch_json, fetch_text=fetch_text, wall=wall, sleep=sleep)
+        st, items = bf_gdelt.run(self.SINCE, self.UNTIL, budget=bud(500), fetch_json=fetch_json, fetch_text=fetch_text, wall=wall, sleep=sleep, guard=CLEAR)
         self.assertEqual(st['status'], 'complete')
         self.assertEqual(len(sent) - n1, st['planned_slices'] - 2)            # the 2 slices done in leg 1 are not asked again
         self.assertEqual(len(st['probe']), 3)                                 # the probe is not repeated
+
+
+class ConductorGuardTests(Sandbox):
+    """2026-11-25: the backfill's GDELT requests never overlap the live conductor's own GDELT run (feeds.py `gdelt`, every
+    1,800 s from the conductor's start, not at fixed minutes, up to 900 s long)."""
+    T = datetime(2026, 11, 14, 10, 0, tzinfo=UTC)
+    SINCE, UNTIL = GDELTBackfillTests.SINCE, GDELTBackfillTests.UNTIL
+
+    def setUp(self):
+        super().setUp()
+        self.saved_queries = bf_gdelt.QUERIES
+
+    def status(self, generated, last_start, last_end, running=False):
+        return {'generated_at': hf.iso(generated), 'feeds': {'gdelt': {
+            'last_start': hf.iso(last_start), 'last_start_ts': last_start.timestamp(), 'last_end': hf.iso(last_end), 'running': running}}}
+
+    def test_interval_matches_the_conductor(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('hf_feeds_registry', os.path.join(HF_ROOT, 'feeds.py'))
+        reg = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(reg)
+        self.assertEqual(reg.FEEDS['gdelt']['every'], bf_gdelt.CONDUCTOR_EVERY_S)
+        self.assertGreaterEqual(bf_gdelt.GUARD_LEAD_S, bf_gdelt.REQUEST_TIMEOUT_S + 30)
+
+    def test_window(self):
+        T, s, m = self.T, timedelta(seconds=1), timedelta(minutes=1)
+        win = bf_gdelt.conductor_window
+        self.assertFalse(win(None, T)[0])                                                    # unreadable: hold
+        self.assertFalse(win({'feeds': {}}, T)[0])
+        self.assertFalse(win(self.status(T - 11 * m, T - 20 * m, T - 17 * m), T)[0])         # stale: hold
+        self.assertFalse(win(self.status(T - m, T - 2 * m, T - 5 * m, running=True), T)[0])  # running: hold
+        self.assertFalse(win(self.status(T - s, T - 4 * m, T - 30 * s), T)[0])              # ended 30 s ago: hold
+        ok, why, left = win(self.status(T - m, T - 10 * m, T - 7 * m), T)                    # next run at T + 20 min
+        self.assertEqual((ok, why), (True, 'clear'))
+        self.assertEqual(left, (20 * m - bf_gdelt.GUARD_LEAD_S * s).total_seconds())
+        self.assertFalse(win(self.status(T - m, T - 28 * m, T - 25 * m), T)[0])              # next run in 2 min: hold
+        self.assertFalse(win(self.status(T - m, T - 40 * m, T - 37 * m), T)[0])              # overdue (not yet published): hold
+        self.assertFalse(win(self.status(T - m, T - 10 * m, T - 11 * m), T)[0])              # end before start: hold
+
+    def test_fails_closed_without_the_status(self):
+        real = next(v for mod, name, v in self.saved if name == 'read_conductor_status')
+        self.assertIsNone(real())                                    # BACKFILL_REPO_ROOT unset: no git call, None
+        self.assertFalse(bf_gdelt.ConductorGuard(read=lambda: None)(self.T)[0])
+
+    def test_never_overlaps_the_conductor(self):
+        """A SYNTHETIC conductor runs GDELT at :21:00 and :51:00 for 200 s (inside both burst windows, and while the
+        backfill would be sending) and publishes its status every 300 s. Every backfill request, from sending to answer,
+        stays 60 s clear of every conductor run. Without the guard this test fails."""
+        h = GDELTBackfillTests('test_budget_then_resume')                # its fake clock and fake GDELT
+        bf_gdelt.QUERIES = [q for q in bf_gdelt.QUERIES if q[0] in ('cholera', 'outbreak-theme')]
+        self.addCleanup(setattr, bf_gdelt, 'QUERIES', self.saved_queries)
+        clock, sent, wall, sleep, fetch_json, fetch_text = h.harness(first_slice_full=False)
+        base, dur, every = datetime(2026, 11, 14, 9, 21, tzinfo=UTC), timedelta(seconds=200), timedelta(seconds=1800)
+        runs = [base + k * every for k in range(-2, 60)]
+
+        def read():
+            t = clock['t']
+            pub = datetime.fromtimestamp((int(t.timestamp() - 20) // 300) * 300 + 20, UTC)       # published every 300 s
+            started = [r for r in runs if r <= pub]
+            running = pub < started[-1] + dur
+            ended = [r for r in started if r + dur <= pub]
+            return self.status(pub, started[-1], ended[-1] + dur, running=running)
+        guard = bf_gdelt.ConductorGuard(read=read)
+        st, items = bf_gdelt.run(self.SINCE, self.UNTIL, budget=bf_common.Budget(seconds=10 ** 9, max_requests=500, clock=lambda: 0),
+                                 fetch_json=fetch_json, fetch_text=fetch_text, wall=wall, sleep=sleep, guard=guard)
+        self.assertEqual(st['status'], 'complete')
+        self.assertGreater(st['guard']['holds'], 0)                  # it did meet the conductor, and waited
+        self.assertTrue(all(bf_gdelt.burst_window(t) is not None for t in sent))
+        for a, b in zip(sent, h.answered):
+            for r in runs:
+                self.assertTrue(b <= r - timedelta(seconds=60) or a >= r + dur + timedelta(seconds=60), (a, b, r))
+
 
 
 class MergeTests(Sandbox):

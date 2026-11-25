@@ -36,7 +36,8 @@ def main(argv) -> int:
                 os.makedirs(dest, exist_ok=True)
                 for f in files:
                     shutil.copy2(os.path.join(root, f), os.path.join(dest, f))
-    r = subprocess.run([sys.executable, 'backfill.py', *args], cwd=wd, env=dict(os.environ, PYTHONUNBUFFERED='1'))
+    # BACKFILL_REPO_ROOT: bf_gdelt reads the conductor's status branch through this checkout (ConductorGuard)
+    r = subprocess.run([sys.executable, 'backfill.py', *args], cwd=wd, env=dict(os.environ, PYTHONUNBUFFERED='1', BACKFILL_REPO_ROOT=ROOT))
     if r.returncode != 0:
         return r.returncode
     if publish:
