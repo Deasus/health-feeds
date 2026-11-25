@@ -82,6 +82,7 @@ PATHOGENS = [
     ('west_nile', 'West Nile virus', 'vectorBorne', [r'west nile', r'nilo occidental', r'nil occidental', r'nilo ocidental', r'غرب النيل', r'西尼罗', r'西尼羅',
                                                       r'западн\w* нил\w*']),
     ('oropouche', 'Oropouche', 'vectorBorne', [r'oropouche']),
+    ('shamonda', 'Shamonda virus', 'vectorBorne', [r'shamonda(?: virus)?']),      # Simbu orthobunyavirus, midge-borne (DON623, 2026-11-02)
     ('jev', 'Japanese encephalitis', 'vectorBorne', [r'japanese encephalitis', r'encefalitis japonesa', r'encéphalite japonaise', r'encefalite japonesa',
                                                       r'日本脑炎', r'日本腦炎', r'японск\w* энцефалит\w*']),
     ('eee', 'Eastern equine encephalitis', 'vectorBorne', [r'eastern equine encephal\w+', r'equine encephalomyelitis \(eastern\)', r'\beee\b', r'triple e\b',

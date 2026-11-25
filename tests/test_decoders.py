@@ -82,6 +82,8 @@ class PathogenTests(unittest.TestCase):
         self.assertEqual((row['pathogen'], row['countries']), ('h5n1', ['US']))
         self.assertEqual(pathogens.primary('Melioidosis cluster linked to aromatherapy spray')['slug'], 'melioidosis')
         self.assertEqual(pathogens.primary('Glanders in horses: Burkholderia mallei confirmed')['slug'], 'glanders')
+        don623 = importlib.import_module('fetch_who').decode(load_json('who_don623.json'))[0]     # EVIDENCE.md defect 10
+        self.assertEqual((don623['pathogen'], don623['pathogen_class'], don623['country_code']), ('shamonda', 'vectorBorne', 'FR'))
 
     def test_counts(self):
         cases, deaths, quote = events.counts_from_text(

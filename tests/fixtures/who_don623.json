@@ -1,0 +1,13 @@
+{
+ "_note": "WHO DON 2026-DON623 (published 2026-11-02): title, date, ids and the summary's first sentence as WHO wrote it, from PULSE's own copy (extract snapshot 2026-11-25T03:09Z). Other API fields omitted.",
+ "value": [
+  {
+   "Id": "don623",
+   "PublicationDate": "2026-11-02T14:26:51Z",
+   "UrlName": "2026-DON623",
+   "DonId": "2026-DON623",
+   "Title": "Shamonda virus in human - France",
+   "Summary": "<p>On 20 October 2026, the National IHR Focal Point (NFP) of France notified WHO regarding the first documented human infection with Shamonda virus (SHAV).</p>"
+  }
+ ]
+}
