@@ -5,7 +5,8 @@ Reads each sibling feed's output (../<feed>/data/<file> on the same runner, else
 branch), then:
   1. keeps events updated within WINDOW_DAYS (WHO DONs can be months old; the map wants recent), and every State
      Department advisory, which is in force whatever the date it was issued;
-  2. counts corroboration: distinct non-news sources naming the same pathogen in the same country;
+  2. counts corroboration: distinct non-news sources naming the same pathogen in the same country, each from its own
+     date (an undated event never corroborates);
   3. applies the news rule: a GDELT headline is mapped (country centroid) and lifted to MINOR only
      when at least one non-news source corroborates it; otherwise it stays INFO and unmapped;
   4. assigns a cluster key (pathogen | country | ISO week) so the app can collapse duplicates;
@@ -20,7 +21,7 @@ are placed at that city too.
 import re
 from collections import Counter, defaultdict
 from datetime import timedelta
-from hf import sibling_data, write_if_changed, envelope, parse_date, iso, log, fail, now
+from hf import sibling_data, write_if_changed, envelope, parse_date, log, fail, now
 import events, geocode, gazetteer, pathogens
 import llm_extract
 
@@ -32,17 +33,17 @@ SOURCES = [
 ]
 WINDOW_DAYS = 45
 CORROBORATION_DAYS = 21
-# Feeds that list only what is in force, dated when it was issued: kept whatever their date (2026-11-25). State Department
-# advisories carried no date before then, so the window never removed them; with their own date it must not either.
+# Feeds that list only what is in force, dated when it was issued: kept on the map whatever their date (2026-11-25). State
+# Department advisories carried no date before then, so the window never removed them; with their own date it must not either.
 IN_FORCE_SOURCES = {'US State Department'}
 
 
-def signal_time(ev, ref):
-    """When an event counts for corroboration and clustering: its own date, or `ref` for an advisory in force (as before
-    2026-11-25, when State advisories had no date; their date is shown, but they still count as current)."""
-    if ev.get('source') in IN_FORCE_SOURCES:
-        return ref
-    return parse_date(ev.get('updated')) or ref
+def signal_time(ev):
+    """When an event counts for corroboration: its own date, or None. An undated event never corroborates (2026-11-25,
+    EVIDENCE.md defect 12): stamped with the run time, an undated State advisory whose first-named pathogen was Ebola
+    corroborated Ebola news in Uganda and South Sudan for as long as it was carried. An advisory counts from the date it
+    was issued, like every other source."""
+    return parse_date(ev.get('updated'))
 
 
 # A curator place that names a US county ("Chippewa County", "Orleans Parish"): resolved through counties.json when the
@@ -170,13 +171,17 @@ def merge(items, ref):
             continue
         if 'animal' in (ev.get('tags') or []) and ev['pathogen'] != 'h5n1':
             continue            # an animal rabies or anthrax report is its own layer; only HPAI in animals corroborates "bird flu" headlines
+        when = signal_time(ev)
+        if when is None:
+            continue            # undated: shown, but never corroborates
         key = (ev['pathogen'], ev['country_code'])
         index[key].add(ev['source'])
-        stamps[key].append(signal_time(ev, ref))
+        stamps[key].append(when)
     for ev in kept:
         key = (ev['pathogen'], ev.get('country_code'))
         others = {s for s in index.get(key, set()) if s != ev['source']} if key[1] else set()
-        recent = any(abs((signal_time(ev, ref) - t).days) <= CORROBORATION_DAYS for t in stamps.get(key, []))
+        when = signal_time(ev) or ref
+        recent = any(abs((when - t).days) <= CORROBORATION_DAYS for t in stamps.get(key, []))
         ev['corroboration'] = len(others) if recent else 0
         if ev['source_tier'] == 'news':
             city = ev.pop('_city', None)
@@ -204,7 +209,7 @@ def merge(items, ref):
                 ev['lat'] = ev['lng'] = None
                 ev['geo_precision'] = 'none'
                 ev['geo_radius_km'] = None
-        ev['cluster'] = events.dedupe_key(ev if ev.get('source') not in IN_FORCE_SOURCES else dict(ev, onset=None, updated=iso(ref)))
+        ev['cluster'] = events.dedupe_key(ev)
     kept.sort(key=lambda e: e.get('updated') or '', reverse=True)     # newest first …
     kept.sort(key=lambda e: -e['severity'])                              # … within severity, high to low (stable)
     return kept

@@ -76,7 +76,7 @@ placed at that city too (`city-from-text`). Without the key the merge runs rule-
 
 **Rules the merge applies (`feeds/extract/build_events.py`):** events older than 45 days are dropped;
 `corroboration` counts distinct non-news sources naming the same pathogen in the same country within
-21 days; a news headline is mapped (country centroid) and lifted to MINOR only when corroborated,
+21 days (each from its own date; an undated item never corroborates); a news headline is mapped (country centroid) and lifted to MINOR only when corroborated,
 otherwise it stays INFO with no coordinates; `cluster` = pathogen | country | admin1 | ISO week.
 
 **Severity rules:** WHO DON → SEVERE · CDC travel notice level 3/2/1 → SEVERE/MODERATE/MINOR ·
@@ -153,7 +153,9 @@ ReliefWeb feed), `ANTHROPIC_API_KEY` (enables the curator pass; set 2026-10-22).
   archive once so stored rows are re-derived.
 - **State Dept RSS** is ~600 KB for 222 items; health relevance comes from the bolded reasons. Each item's `pubDate` has
   no time ("Wed, 21 Oct 2026"); `parse_date` reads it since 2026-11-25 (before, every advisory had `updated: null`). An
-  advisory is in force whatever its date, so the merge never drops it by age and counts it as current for corroboration.
+  advisory is in force whatever its date, so the merge never drops it by age; it corroborates news only within 21 days
+  of the date it was issued, like any source, and an undated item never corroborates (undated, the run time had let
+  advisories corroborate Ebola in Uganda and South Sudan for as long as they were carried).
 - **aphis.usda.gov** 403s browser-like User-Agents (Akamai) but serves the pipeline's own `health-feeds/1.0` UA; keep it.
 - **WAHIS** has no documented API: the list endpoint is a POST with the dashboard's filter body and `totalSize`; a report's
   `all-information` carries the coordinates. Details are cached in `wahis/reports.json` so each report is fetched once.

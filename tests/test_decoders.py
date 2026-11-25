@@ -329,10 +329,10 @@ class ExtractTests(unittest.TestCase):
         by_id = {e['id']: e for e in merged}
         self.assertNotIn(old['id'], by_id)
         self.assertEqual(by_id[state['id']]['updated'], state['updated'])
-        self.assertEqual(by_id[state['id']]['cluster'], events.dedupe_key(dict(state, updated=hf.iso(NOW))))   # counts as current
+        self.assertEqual(by_id[state['id']]['cluster'], events.dedupe_key(state))              # its own week
         yemen_news = events.make(source='GDELT', source_tier='news', kind='news', title='Cholera cases rise in Yemen', updated=NOW,
                                  pathogen='cholera', country_code='YE', lat=None, lng=None, geo_precision='none', source_id='n3')
-        self.assertEqual(next(e for e in mod.merge([state, yemen_news], NOW) if e['source'] == 'GDELT')['corroboration'], 1)
+        self.assertEqual(next(e for e in mod.merge([state, yemen_news], NOW) if e['source'] == 'GDELT')['corroboration'], 0)
         self.assertEqual(by_id[news_corr['id']]['corroboration'], 1)
         self.assertEqual(by_id[news_corr['id']]['severity_label'], 'MINOR')
         self.assertIsNotNone(by_id[news_corr['id']]['lat'])
@@ -344,6 +344,29 @@ class ExtractTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class AdvisoryCorroborationTests(unittest.TestCase):
+    def test_advisories_corroborate_from_their_own_date(self):
+        """EVIDENCE.md defect 12 (2026-11-25): undated, State advisories were stamped with the run time and corroborated news
+        for as long as they were carried (Ebola in Uganda and South Sudan). Now an advisory counts within 21 days of the date
+        it was issued, and an undated item never corroborates. Advisories from tests/fixtures/state_advisories.xml."""
+        mod = importlib.import_module('build_events')
+        _, items = importlib.import_module('fetch_state').decode(ET.parse(fixture('state_advisories.xml')).getroot())
+        ke = next(i for i in items if i['country_code'] == 'KE')
+        self.assertEqual(ke['updated'], '2026-10-19T00:00:00Z')
+
+        def news(day, sid):
+            return events.make(source='GDELT', source_tier='news', kind='news', title=f'{ke["pathogen_name"]} cases in Kenya', updated=day,
+                               pathogen=ke['pathogen'], country_code='KE', lat=None, lng=None, geo_precision='none', source_id=sid)
+        near, late = news(datetime(2026, 10, 25, tzinfo=timezone.utc), 'k1'), news(datetime(2026, 11, 20, tzinfo=timezone.utc), 'k2')
+        ref = datetime(2026, 11, 20, 12, tzinfo=timezone.utc)
+        out = {e['id']: e for e in mod.merge([dict(ke), dict(near), dict(late)], ref)}
+        self.assertEqual((out[near['id']]['corroboration'], out[late['id']]['corroboration']), (1, 0))    # 6 days vs 32 days after it
+        self.assertIn(ke['id'], out)                                           # still on the map: in force whatever its age
+        undated = dict(ke, updated=None)
+        out = {e['id']: e for e in mod.merge([undated, dict(near)], ref)}
+        self.assertEqual(out[near['id']]['corroboration'], 0)                  # undated: never corroborates
 
 
 class StateDeptCodeTests(unittest.TestCase):
