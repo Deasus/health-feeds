@@ -1,0 +1,118 @@
+name: backfill
+
+# One-off dated-range backfill for PULSE's replay measurement (feeds/backfill/README.md). Dispatched by hand, once.
+# It is NOT on a schedule and NOT in feeds.py: the conductor never runs it.
+#
+# Each source runs in its own job (GDELT, WAHIS, PAHO, HDX, ReliefWeb), resuming from the `backfill` branch. A merge job
+# writes events.json.gz + manifest.json and publishes the branch as one parentless commit (conductor.publish). If a source
+# is unfinished (GDELT's slices or WAHIS's report chains outlast one leg), the merge job queues the next leg for just those
+# sources, up to `max_legs`. This repository is public, so these minutes are free.
+on:
+  workflow_dispatch:
+    inputs:
+      sources:
+        description: 'Comma-separated sources to fetch'
+        required: false
+        default: 'paho,hdx,reliefweb,wahis,gdelt'
+      leg:
+        description: 'Leg number (set by the chain; start at 1)'
+        required: false
+        default: '1'
+      max_legs:
+        description: 'Stop chaining after this leg'
+        required: false
+        default: '4'
+      since:
+        description: 'Start of the window (source dates), ISO 8601'
+        required: false
+        default: '2024-04-01T00:00:00Z'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: backfill
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      sources: ${{ steps.p.outputs.sources }}
+    steps:
+      - id: p
+        env:
+          SOURCES: ${{ inputs.sources }}
+        run: |
+          python3 -c "import json,os; s=[x.strip() for x in os.environ['SOURCES'].split(',') if x.strip()]; print('sources='+json.dumps(s))" >> "$GITHUB_OUTPUT"
+
+  fetch:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    strategy:
+      fail-fast: false
+      matrix:
+        source: ${{ fromJSON(needs.plan.outputs.sources) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: tests (decoders and backfill on fixtures; no network)
+        run: python -m unittest discover -s tests -q
+      - name: fetch ${{ matrix.source }} (leg ${{ inputs.leg }})
+        env:
+          BACKFILL_SINCE: ${{ inputs.since }}
+          BACKFILL_TIME_BUDGET_S: '18000'   # 5 h of work; a GDELT leg may then wait up to 30 min for its offset; the job allows 345 min
+          RELIEFWEB_APPNAME: ${{ secrets.RELIEFWEB_APPNAME }}
+        run: python feeds/backfill/run.py fetch ${{ matrix.source }}
+      - name: keep this source's progress for the merge
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bf-${{ matrix.source }}
+          path: work/backfill/data/sources/${{ matrix.source }}/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  merge:
+    needs: fetch
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: bf-*
+          path: _overlay
+      - name: lay each artifact out as sources/<slug>/
+        run: |
+          mkdir -p _overlay_sources/x/sources
+          for d in _overlay/bf-*; do [ -d "$d" ] && cp -r "$d" "_overlay_sources/x/sources/${d#_overlay/bf-}"; done
+          ls -R _overlay_sources | head -50
+      - name: merge and publish the backfill branch
+        id: merge
+        env:
+          BACKFILL_SINCE: ${{ inputs.since }}
+        run: |
+          python feeds/backfill/run.py merge --leg ${{ inputs.leg }} --overlay _overlay_sources --publish | tee merge.log
+          echo "unfinished=$(grep '^UNFINISHED=' merge.log | tail -1 | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+      - name: queue the next leg for unfinished sources
+        if: ${{ steps.merge.outputs.unfinished != '' && fromJSON(inputs.leg) < fromJSON(inputs.max_legs) }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh workflow run backfill.yml --ref main \
+            -f sources='${{ steps.merge.outputs.unfinished }}' -f leg=$(( ${{ inputs.leg }} + 1 )) \
+            -f max_legs='${{ inputs.max_legs }}' -f since='${{ inputs.since }}'
