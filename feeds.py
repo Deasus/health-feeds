@@ -17,7 +17,8 @@ Cadences follow the upstream rhythm (research/sources-2026-10-22.md in ~/PULSE):
 WHO DON several a week, CDC travel notices per notice, State Dept per advisory,
 ECDC weekly, HDX per dataset, GDELT continuous (one request per 5 s), openFDA
 weekly, NNDSS weekly (Thursdays), NWSS weekly (Fridays), ReliefWeb per disaster,
-PAHO alerts a few a month, WAHIS notifications daily, APHIS CSVs weekly, WHISPers daily.
+PAHO alerts a few a month, WAHIS notifications daily, APHIS CSVs weekly, WHISPers daily, the NRC workbook
+about weekly.
 """
 
 FEEDS = {
@@ -48,6 +49,10 @@ FEEDS = {
     # ── official, hospital capacity (2026-11-15, PULSE Web care layer; not merged into extract) ──
     'nhsn':      {'code': ['nhsn'], 'run': [['python3', 'fetch_nhsn_hrd.py']],
                   'every': 86400, 'timeout': 300, 'optional': ['SOCRATA_APP_TOKEN']},
+
+    # ── official, chemical and oil releases (2026-11-25, PULSE Web chemical layer; not merged into extract) ──
+    'nrc':       {'code': ['nrc', '_shared'], 'run': [['python3', 'fetch_nrc.py']],
+                  'every': 86400, 'timeout': 900},
 
     # ── aggregators ────────────────────────────────────────────────────────────
     'hdx':       {'code': ['hdx', '_shared'], 'run': [['python3', 'fetch_hdx.py']],
