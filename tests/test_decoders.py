@@ -107,6 +107,9 @@ class PathogenTests(unittest.TestCase):
         self.assertEqual([i['country_code'] for i in items], ['CD', 'KE', 'NG'])
         self.assertTrue(all((i['cases'], i['deaths'], i['cases_quote']) == (10668, 5198, '10 668 confirmed cases') for i in items))
         self.assertIn(['Cases', '10,668'], items[0]['facts'])
+        self.assertEqual(who.newest(load_json('who_don.json')['value'] + load_json('who_don629.json')['value']),
+                         '2026-DON629 published 2026-11-24T10:52:39Z')       # the per-run log line (defect 14)
+        self.assertEqual(who.newest([]), 'none')
         archive = importlib.import_module('fetch_who_archive')
         row = archive.compact(load_json('who_don625.json')['value'][0])
         self.assertEqual((row['cases'], row['deaths']), (10668, 5198))

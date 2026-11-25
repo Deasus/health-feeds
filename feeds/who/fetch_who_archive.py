@@ -18,6 +18,7 @@ import time
 from collections import Counter
 from hf import get_json, read_json, write_if_changed, envelope, parse_date, strip_html, iso, log, fail, HFError, DATA
 import events, geocode, pathogens
+import fetch_who
 
 URL = ('https://www.who.int/api/news/diseaseoutbreaknews?$orderby=PublicationDate%20desc&$top=100'
        '&$select=Id,Title,PublicationDate,UrlName,DonId,Summary')
@@ -64,6 +65,8 @@ def main():
                 break
             fail(str(e))
         vals = d.get('value') or []
+        if page == 0:
+            log(f'  API newest {fetch_who.newest(vals)}')               # every run: a late API vs a missed run (defect 14)
         pages += 1
         new = [compact(v) for v in vals]
         fresh = [r for r in new if r['id'] and r['id'] not in seen]

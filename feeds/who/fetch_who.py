@@ -46,6 +46,17 @@ def decode(payload: dict) -> list:
     return out
 
 
+def newest(values) -> str:
+    """'<DonId> published <PublicationDate>' for the newest notice the API returned. Logged on every run (2026-11-25): a
+    notice that reaches PULSE days after WHO dates it (EVIDENCE.md defects 3 and 14) can then be told apart as a late API
+    (the log shows it absent) or a missed run (the log shows it listed)."""
+    rows = [v for v in values or [] if v.get('PublicationDate')]
+    if not rows:
+        return 'none'
+    v = max(rows, key=lambda r: parse_date(r.get('PublicationDate')) or parse_date('1900-01-01'))
+    return f"{v.get('DonId') or v.get('UrlName')} published {v.get('PublicationDate')}"
+
+
 def main():
     try:
         payload = get_json(URL, timeout=40)
@@ -54,7 +65,7 @@ def main():
     items = decode(payload)
     if not items:
         fail('WHO DON decoded to zero items')
-    log(f'WHO DON: {len(items)} events from {len(payload.get("value", []))} notices')
+    log(f'WHO DON: {len(items)} events from {len(payload.get("value", []))} notices; API newest {newest(payload.get("value"))}')
     write_if_changed('don.json', envelope(items, upstream=URL, credit=CREDIT, licence=LICENCE))
 
 
