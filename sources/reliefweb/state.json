@@ -1,0 +1,1 @@
+{"class":"aggregator","date_field":"date.created","failures":0,"intervals":[],"items":0,"notes":[],"reason":"RELIEFWEB_APPNAME is not set: ReliefWeb needs a pre-approved app name (PLAN decision 9); no request made","requested":{"since":"2024-04-01T00:00:00Z","until":"2026-11-25T03:38:25Z"},"requests":0,"resumable":false,"source":"ReliefWeb","status":"skipped"}

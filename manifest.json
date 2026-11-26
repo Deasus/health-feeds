@@ -1,0 +1,969 @@
+{
+ "by_source": {
+  "GDELT": 540,
+  "HDX": 50,
+  "PAHO": 89,
+  "WOAH WAHIS": 8554
+ },
+ "generated_at": "2026-11-26T00:08:42Z",
+ "items": 9233,
+ "legs": [
+  {
+   "leg": 1,
+   "merged_at": "2026-11-25T09:05:11Z",
+   "statuses": {
+    "gdelt": "partial",
+    "hdx": "partial",
+    "paho": "complete",
+    "reliefweb": "skipped",
+    "wahis": "partial"
+   }
+  },
+  {
+   "leg": 2,
+   "merged_at": "2026-11-25T14:06:21Z",
+   "statuses": {
+    "gdelt": "partial",
+    "hdx": "partial",
+    "paho": "complete",
+    "reliefweb": "skipped",
+    "wahis": "partial"
+   }
+  },
+  {
+   "leg": 3,
+   "merged_at": "2026-11-25T19:07:17Z",
+   "statuses": {
+    "gdelt": "partial",
+    "hdx": "partial",
+    "paho": "complete",
+    "reliefweb": "skipped",
+    "wahis": "partial"
+   }
+  },
+  {
+   "leg": 4,
+   "merged_at": "2026-11-26T00:08:42Z",
+   "statuses": {
+    "gdelt": "partial",
+    "hdx": "partial",
+    "paho": "complete",
+    "reliefweb": "skipped",
+    "wahis": "partial"
+   }
+  }
+ ],
+ "note": "intervals = source dates over which every request the backfill needed succeeded; GDELT per query (queries[].intervals, targets = pathogen slugs). A source with no intervals covers nothing.",
+ "requested": {
+  "since": "2024-04-01T00:00:00Z"
+ },
+ "schema": "health-feeds.backfill.manifest/1",
+ "sources": {
+  "GDELT": {
+   "bursts": 44,
+   "class": "news",
+   "date_field": "seendate",
+   "failures": 2,
+   "guard": {
+    "after_s": 60,
+    "conductor_every_s": 1800,
+    "held_s": 7298,
+    "holds": 121,
+    "lead_s": 150,
+    "reasons": {
+     "conductor GDELT run due": 40,
+     "conductor GDELT run in progress": 72,
+     "conductor GDELT run just ended": 7,
+     "conductor status stale (between chain links?)": 2
+    },
+    "stale_s": 600
+   },
+   "intervals": [],
+   "items": 540,
+   "notes": [
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "GKG theme list read: 59315 themes; per-pathogen queries using a theme: ['measles', 'cholera', 'dengue', 'mpox', 'avian-flu', 'ebola', 'polio', 'mers', 'meningitis']",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28%22yellow%20fe",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28%22yellow%20fe",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28%22yellow%20fe",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28%22west%20nile",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28%22west%20nile",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28%22west%20nile",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28%22west%20nile",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28%22west%20nile",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28%22west%20nile",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28%22west%20nile",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28mumps%20OR%20r",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28salmonella%20O",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28salmonella%20O",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28salmonella%20O",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28salmonella%20O",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28salmonella%20O",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28salmonella%20O",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28salmonella%20O",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=%28salmonella%20O",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA",
+    "burst ended after 3 rate limits: HTTP 429 for https://api.gdeltproject.org/api/v2/doc/doc?query=theme%3ATAX_DISEA"
+   ],
+   "plan_start": "2024-11-27T00:00:00Z",
+   "planned_slices": 5015,
+   "probe": [
+    {
+     "articles": 116,
+     "day": "2026-09-01",
+     "days_back": 85
+    },
+    {
+     "articles": 250,
+     "day": "2026-08-25",
+     "days_back": 92
+    },
+    {
+     "articles": 250,
+     "day": "2026-08-17",
+     "days_back": 100
+    },
+    {
+     "articles": 250,
+     "day": "2026-07-28",
+     "days_back": 120
+    },
+    {
+     "articles": 250,
+     "day": "2026-05-29",
+     "days_back": 180
+    },
+    {
+     "articles": 250,
+     "day": "2025-11-25",
+     "days_back": 365
+    },
+    {
+     "articles": 209,
+     "day": "2024-11-25",
+     "days_back": 730
+    }
+   ],
+   "probe_errors": 0,
+   "queries": [
+    {
+     "form": "theme",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-11-29T00:00:00Z"
+      ]
+     ],
+     "kind": "pathogen",
+     "label": "measles",
+     "query": "theme:TAX_DISEASE_MEASLES sourcelang:english",
+     "slice_days": 2,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 1,
+      "todo": 364
+     },
+     "split": true,
+     "targets": [
+      "measles"
+     ],
+     "theme": "TAX_DISEASE_MEASLES"
+    },
+    {
+     "form": "theme",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-11-29T00:00:00Z"
+      ]
+     ],
+     "kind": "pathogen",
+     "label": "cholera",
+     "query": "theme:TAX_DISEASE_CHOLERA sourcelang:english",
+     "slice_days": 2,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 1,
+      "todo": 364
+     },
+     "split": true,
+     "targets": [
+      "cholera"
+     ],
+     "theme": "TAX_DISEASE_CHOLERA"
+    },
+    {
+     "form": "theme",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-11-29T00:00:00Z"
+      ]
+     ],
+     "kind": "pathogen",
+     "label": "dengue",
+     "query": "theme:TAX_DISEASE_DENGUE sourcelang:english",
+     "slice_days": 2,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 1,
+      "todo": 364
+     },
+     "split": true,
+     "targets": [
+      "dengue"
+     ],
+     "theme": "TAX_DISEASE_DENGUE"
+    },
+    {
+     "form": "theme",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-11-29T00:00:00Z"
+      ]
+     ],
+     "kind": "pathogen",
+     "label": "mpox",
+     "query": "theme:TAX_DISEASE_MONKEYPOX sourcelang:english",
+     "slice_days": 2,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 1,
+      "todo": 364
+     },
+     "split": true,
+     "targets": [
+      "mpox"
+     ],
+     "theme": "TAX_DISEASE_MONKEYPOX"
+    },
+    {
+     "form": "theme",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-11-29T00:00:00Z"
+      ]
+     ],
+     "kind": "pathogen",
+     "label": "avian-flu",
+     "query": "theme:TAX_DISEASE_AVIAN_INFLUENZA sourcelang:english",
+     "slice_days": 2,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 1,
+      "todo": 364
+     },
+     "split": true,
+     "targets": [
+      "h5n1"
+     ],
+     "theme": "TAX_DISEASE_AVIAN_INFLUENZA"
+    },
+    {
+     "form": "theme",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-11-29T00:00:00Z"
+      ]
+     ],
+     "kind": "pathogen",
+     "label": "ebola",
+     "query": "theme:TAX_DISEASE_EBOLA sourcelang:english",
+     "slice_days": 2,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 1,
+      "todo": 364
+     },
+     "split": true,
+     "targets": [
+      "ebola"
+     ],
+     "theme": "TAX_DISEASE_EBOLA"
+    },
+    {
+     "form": "keywords",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-11-29T00:00:00Z"
+      ]
+     ],
+     "kind": "pathogen",
+     "label": "flu-covid-outbreaks",
+     "query": "(\"flu outbreak\" OR \"influenza outbreak\" OR \"covid outbreak\" OR \"covid-19 outbreak\" OR \"new covid variant\") sourcelang:english",
+     "slice_days": 2,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 1,
+      "todo": 364
+     },
+     "split": true,
+     "targets": [
+      "influenza",
+      "covid19"
+     ],
+     "theme": null
+    },
+    {
+     "form": "keywords",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-11-29T00:00:00Z"
+      ]
+     ],
+     "kind": "pathogen",
+     "label": "foodborne",
+     "query": "(salmonella OR listeria OR \"E. coli\" OR botulism OR norovirus OR cyclospora OR campylobacter OR shigella OR cronobacter) sourcelang:english",
+     "slice_days": 2,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 2,
+      "todo": 364
+     },
+     "split": true,
+     "targets": [
+      "salmonella",
+      "listeria",
+      "ecoli",
+      "botulism",
+      "norovirus",
+      "cyclospora",
+      "campylobacter",
+      "shigella",
+      "cronobacter"
+     ],
+     "theme": null
+    },
+    {
+     "form": "theme",
+     "intervals": [],
+     "kind": "pathogen",
+     "label": "polio",
+     "query": "theme:TAX_DISEASE_POLIO sourcelang:english",
+     "slice_days": 7,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 0,
+      "todo": 105
+     },
+     "split": true,
+     "targets": [
+      "polio"
+     ],
+     "theme": "TAX_DISEASE_POLIO"
+    },
+    {
+     "form": "keywords",
+     "intervals": [],
+     "kind": "pathogen",
+     "label": "vhf",
+     "query": "(marburg OR lassa OR nipah OR hendra OR chapare) sourcelang:english",
+     "slice_days": 7,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 0,
+      "todo": 105
+     },
+     "split": true,
+     "targets": [
+      "marburg",
+      "lassa",
+      "nipah",
+      "hendra",
+      "chapare"
+     ],
+     "theme": null
+    },
+    {
+     "form": "keywords",
+     "intervals": [],
+     "kind": "pathogen",
+     "label": "zoonoses",
+     "query": "(hantavirus OR plague OR anthrax OR tularemia OR glanders OR melioidosis OR brucellosis OR \"Q fever\") sourcelang:english",
+     "slice_days": 7,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 0,
+      "todo": 105
+     },
+     "split": true,
+     "targets": [
+      "hantavirus",
+      "plague",
+      "anthrax",
+      "tularemia",
+      "glanders",
+      "melioidosis",
+      "brucellosis",
+      "q_fever"
+     ],
+     "theme": null
+    },
+    {
+     "form": "keywords",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-12-04T00:00:00Z"
+      ]
+     ],
+     "kind": "pathogen",
+     "label": "arbo-aedes",
+     "query": "(\"yellow fever\" OR chikungunya OR zika OR oropouche) sourcelang:english",
+     "slice_days": 7,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 1,
+      "todo": 104
+     },
+     "split": true,
+     "targets": [
+      "yellow_fever",
+      "chikungunya",
+      "zika",
+      "oropouche"
+     ],
+     "theme": null
+    },
+    {
+     "form": "keywords",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-12-04T00:00:00Z"
+      ]
+     ],
+     "kind": "pathogen",
+     "label": "arbo-other",
+     "query": "(\"west nile\" OR \"japanese encephalitis\" OR \"eastern equine encephalitis\" OR \"rift valley fever\" OR \"crimean-congo\" OR CCHF) sourcelang:english",
+     "slice_days": 7,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 1,
+      "todo": 104
+     },
+     "split": true,
+     "targets": [
+      "west_nile",
+      "jev",
+      "eee",
+      "rvf",
+      "cchf"
+     ],
+     "theme": null
+    },
+    {
+     "form": "theme",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-12-04T00:00:00Z"
+      ]
+     ],
+     "kind": "pathogen",
+     "label": "mers",
+     "query": "theme:TAX_DISEASE_MERS sourcelang:english",
+     "slice_days": 7,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 1,
+      "todo": 104
+     },
+     "split": true,
+     "targets": [
+      "mers"
+     ],
+     "theme": "TAX_DISEASE_MERS"
+    },
+    {
+     "form": "keywords",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-12-04T00:00:00Z"
+      ]
+     ],
+     "kind": "pathogen",
+     "label": "diphtheria-pertussis",
+     "query": "(diphtheria OR pertussis OR \"whooping cough\") sourcelang:english",
+     "slice_days": 7,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 1,
+      "todo": 104
+     },
+     "split": true,
+     "targets": [
+      "diphtheria",
+      "pertussis"
+     ],
+     "theme": null
+    },
+    {
+     "form": "theme",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-12-04T00:00:00Z"
+      ]
+     ],
+     "kind": "pathogen",
+     "label": "meningitis",
+     "query": "theme:TAX_DISEASE_MENINGITIS sourcelang:english",
+     "slice_days": 7,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 1,
+      "todo": 104
+     },
+     "split": true,
+     "targets": [
+      "meningitis"
+     ],
+     "theme": "TAX_DISEASE_MENINGITIS"
+    },
+    {
+     "form": "keywords",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-12-04T00:00:00Z"
+      ]
+     ],
+     "kind": "pathogen",
+     "label": "enteric-hepatitis",
+     "query": "(typhoid OR \"hepatitis A\" OR \"hepatitis E\" OR \"hepatitis B\") sourcelang:english",
+     "slice_days": 7,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 1,
+      "todo": 104
+     },
+     "split": true,
+     "targets": [
+      "typhoid",
+      "hepatitis_a",
+      "hepatitis_e",
+      "hepatitis_b"
+     ],
+     "theme": null
+    },
+    {
+     "form": "keywords",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-12-04T00:00:00Z"
+      ]
+     ],
+     "kind": "pathogen",
+     "label": "bacterial-other",
+     "query": "(legionnaires OR legionella OR \"candida auris\" OR \"group A strep\" OR \"scarlet fever\" OR mycoplasma) sourcelang:english",
+     "slice_days": 7,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 1,
+      "todo": 104
+     },
+     "split": true,
+     "targets": [
+      "legionella",
+      "candida_auris",
+      "strep_a",
+      "mycoplasma"
+     ],
+     "theme": null
+    },
+    {
+     "form": "keywords",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-12-04T00:00:00Z"
+      ]
+     ],
+     "kind": "pathogen",
+     "label": "animal-vector",
+     "query": "(rabies OR screwworm OR leishmaniasis OR leptospirosis) sourcelang:english",
+     "slice_days": 7,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 2,
+      "todo": 104
+     },
+     "split": true,
+     "targets": [
+      "rabies",
+      "screwworm",
+      "leishmaniasis",
+      "leptospirosis"
+     ],
+     "theme": null
+    },
+    {
+     "form": "keywords",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-12-04T00:00:00Z"
+      ]
+     ],
+     "kind": "pathogen",
+     "label": "childhood",
+     "query": "(mumps OR rubella OR chickenpox OR varicella) sourcelang:english",
+     "slice_days": 7,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 1,
+      "todo": 104
+     },
+     "split": true,
+     "targets": [
+      "mumps",
+      "rubella",
+      "varicella"
+     ],
+     "theme": null
+    },
+    {
+     "form": "keywords",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-12-04T00:00:00Z"
+      ]
+     ],
+     "kind": "pathogen",
+     "label": "endemic-outbreaks",
+     "query": "(\"malaria outbreak\" OR \"tuberculosis outbreak\" OR \"TB outbreak\" OR \"RSV outbreak\" OR rotavirus OR \"scabies outbreak\" OR vibrio) sourcelang:english",
+     "slice_days": 7,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 1,
+      "todo": 104
+     },
+     "split": true,
+     "targets": [
+      "malaria",
+      "tb",
+      "rsv",
+      "rotavirus",
+      "scabies",
+      "vibrio"
+     ],
+     "theme": null
+    },
+    {
+     "form": "theme",
+     "intervals": [
+      [
+       "2024-11-27T00:00:00Z",
+       "2024-11-29T00:00:00Z"
+      ]
+     ],
+     "kind": "generic",
+     "label": "outbreak-theme",
+     "query": "theme:TAX_DISEASE_OUTBREAK sourcelang:english",
+     "slice_days": 2,
+     "slices": {
+      "capped": 1,
+      "failed": 0,
+      "ok": 0,
+      "todo": 364
+     },
+     "split": false,
+     "targets": [],
+     "theme": null
+    },
+    {
+     "form": "theme",
+     "intervals": [],
+     "kind": "generic",
+     "label": "outbreak-theme-translingual",
+     "query": "theme:TAX_DISEASE_OUTBREAK",
+     "slice_days": 2,
+     "slices": {
+      "capped": 0,
+      "failed": 0,
+      "ok": 0,
+      "todo": 365
+     },
+     "split": false,
+     "targets": [],
+     "theme": null
+    }
+   ],
+   "rate_limited": 143,
+   "reach": "2024-11-25T00:00:00Z",
+   "requested": {
+    "since": "2024-04-01T00:00:00Z",
+    "until": "2026-11-25T03:38:27Z"
+   },
+   "requests": 176,
+   "requests_this_leg": 42,
+   "resumable": true,
+   "since": "2024-04-01T00:00:00Z",
+   "slots": {
+    "burst_s": 1200,
+    "minutes": [
+     5,
+     35
+    ],
+    "spacing_s": 6.0
+   },
+   "slug": "gdelt",
+   "source": "GDELT",
+   "status": "partial",
+   "themes_checked": true,
+   "until": "2026-11-25T03:38:27Z"
+  },
+  "HDX": {
+   "class": "aggregator",
+   "datasets": 47,
+   "date_field": "activity snapshot metadata_modified",
+   "failures": 58,
+   "histories_complete": 0,
+   "histories_incomplete": [
+    "reponse-ebola-eoc-liste-des-recherches-cellule-analyses-sciences-sociales",
+    "ebola-cases-2014",
+    "cholera-outbreaks-in-central-and-west-africa-2014-regional-update",
+    "indonesia-measles-outbreaks-2015-2017",
+    "south-africa-mpox-subnational-cases-2024",
+    "ebola-cases-and-deaths-drc",
+    "number-of-health-care-workers-infected-with-edv",
+    "ebola-cases-and-deaths-drc-north-kivu",
+    "zambia-mpox-subnational-cases",
+    "democratic-republic-of-the-congo-ebola-2021-cumulative-cases-national",
+    "drc-health-facilities",
+    "ebola-geonode",
+    "number-of-health-care-workers-deaths-by-edv",
+    "ebola-treatment-units-with-3-word-addresses",
+    "unicef-im-mcv2",
+    "guinea-ebola-evd-2021-subnational-cases-deaths-hospitalisations-and-contact-tracing",
+    "guinea-ebola-2021-subnational-cases",
+    "cholera-outbreaks-in-central-and-west-africa-2013-regional-update",
+    "fts-ebola-coverage",
+    "drc-uganda-ebola-outbreak-osm-may-2026",
+    "unicef-im-mcv1",
+    "ebola-outbreaks-before-2014",
+    "ebola-west-africa-ebola-treatment-centres-isolation-wards-hospitals-and-transit-centres",
+    "cholera-outbreaks-in-central-and-west-africa-2012-regional-update",
+    "cholera-outbreaks-in-central-and-west-africa-2016-regional-update",
+    "unicef-im-ipv1",
+    "guinea-ebola-wfp-vam-food-security-reduced-coping-strategies-index-and-price-data",
+    "philippine-dengue-cases-and-deaths",
+    "polio-vaccination-campaign-in-the-gaza-strip",
+    "ebola-unicef-eoc-psychosocial-pillar-database-drc-april-2019",
+    "cholera-outbreaks-in-central-and-west-africa-2017-regional-update",
+    "world-health-organization-who-cholera-data",
+    "yemen-cholera-outbreak-daily-epidemiology-update",
+    "unicef-im-pol3",
+    "sierra-leone-ebola-wfp-vam-food-security-reduced-coping-strategies-index-and-price-data",
+    "unicef-eoc-psychosocial-mai-2019-dataset",
+    "rwanda-mpox-subnational-cases-2024",
+    "unicef-im-ipv2",
+    "ethiopia-cholera-cases-by-region",
+    "topline-ebola-outbreak-figures",
+    "democratic-republic-of-congo-ebola-2021-subnational-cases",
+    "moh-ebola-cases-database-as-of-30-june-2019",
+    "republique-democratique-du-congo-cas-et-deces-d-ebola",
+    "guinea-ebola-2021-cumulative-cases-national",
+    "ebola-unicef-eoc-psychosocial-juin-2019-dataset",
+    "cholera-outbreaks-in-central-and-west-africa-2015-regional-update",
+    "indonesia-dengue-fever-cases-by-province-2015-2017"
+   ],
+   "intervals": [],
+   "items": 50,
+   "notes": [
+    "search meningitis start 0: bad JSON from https://data.humdata.org/api/3/action/package_search?q=title:meningitis&fq=metadata_modified:%5B2024-04-01T00:00:00Z%20T: Expecting value: line 1 column 1 (char 0)",
+    "search yellow fever start 0: bad JSON from https://data.humdata.org/api/3/action/package_search?q=title:yellow%20fever&fq=metadata_modified:%5B2024-04-01T00:00:00Z: Expecting value: line 1 column 1 (char 0)",
+    "search lassa start 0: bad JSON from https://data.humdata.org/api/3/action/package_search?q=title:lassa&fq=metadata_modified:%5B2024-04-01T00:00:00Z%20TO%20*: Expecting value: line 1 column 1 (char 0)",
+    "search malaria start 0: bad JSON from https://data.humdata.org/api/3/action/package_search?q=title:malaria&fq=metadata_modified:%5B2024-04-01T00:00:00Z%20TO%2: Expecting value: line 1 column 1 (char 0)",
+    "search diphtheria start 0: bad JSON from https://data.humdata.org/api/3/action/package_search?q=title:diphtheria&fq=metadata_modified:%5B2024-04-01T00:00:00Z%20T: Expecting value: line 1 column 1 (char 0)",
+    "search hepatitis start 0: bad JSON from https://data.humdata.org/api/3/action/package_search?q=title:hepatitis&fq=metadata_modified:%5B2024-04-01T00:00:00Z%20TO: Expecting value: line 1 column 1 (char 0)",
+    "search plague start 0: bad JSON from https://data.humdata.org/api/3/action/package_search?q=title:plague&fq=metadata_modified:%5B2024-04-01T00:00:00Z%20TO%20: Expecting value: line 1 column 1 (char 0)",
+    "search anthrax start 0: bad JSON from https://data.humdata.org/api/3/action/package_search?q=title:anthrax&fq=metadata_modified:%5B2024-04-01T00:00:00Z%20TO%2: Expecting value: line 1 column 1 (char 0)",
+    "search chikungunya start 0: bad JSON from https://data.humdata.org/api/3/action/package_search?q=title:chikungunya&fq=metadata_modified:%5B2024-04-01T00:00:00Z%20: Expecting value: line 1 column 1 (char 0)",
+    "search avian influenza start 0: bad JSON from https://data.humdata.org/api/3/action/package_search?q=title:avian%20influenza&fq=metadata_modified:%5B2024-04-01T00:00:: Expecting value: line 1 column 1 (char 0)",
+    "search outbreak start 0: bad JSON from https://data.humdata.org/api/3/action/package_search?q=title:outbreak&fq=metadata_modified:%5B2024-04-01T00:00:00Z%20TO%: Expecting value: line 1 column 1 (char 0)",
+    "history reponse-ebola-eoc-liste-des-recherches-cellule-analyses-sciences-sociales: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=reponse-ebola-eoc-liste-des-recherches-cellule-analyses-s: Expecting value: line 1 column 1 (char 0)",
+    "history ebola-cases-2014: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=ebola-cases-2014&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history cholera-outbreaks-in-central-and-west-africa-2014-regional-update: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=cholera-outbreaks-in-central-and-west-africa-2014-regiona: Expecting value: line 1 column 1 (char 0)",
+    "history indonesia-measles-outbreaks-2015-2017: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=indonesia-measles-outbreaks-2015-2017&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history south-africa-mpox-subnational-cases-2024: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=south-africa-mpox-subnational-cases-2024&limit=100&offset: Expecting value: line 1 column 1 (char 0)",
+    "history ebola-cases-and-deaths-drc: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=ebola-cases-and-deaths-drc&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history number-of-health-care-workers-infected-with-edv: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=number-of-health-care-workers-infected-with-edv&limit=100: Expecting value: line 1 column 1 (char 0)",
+    "history ebola-cases-and-deaths-drc-north-kivu: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=ebola-cases-and-deaths-drc-north-kivu&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history zambia-mpox-subnational-cases: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=zambia-mpox-subnational-cases&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history democratic-republic-of-the-congo-ebola-2021-cumulative-cases-national: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=democratic-republic-of-the-congo-ebola-2021-cumulative-ca: Expecting value: line 1 column 1 (char 0)",
+    "history drc-health-facilities: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=drc-health-facilities&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history ebola-geonode: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=ebola-geonode&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history number-of-health-care-workers-deaths-by-edv: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=number-of-health-care-workers-deaths-by-edv&limit=100&off: Expecting value: line 1 column 1 (char 0)",
+    "history ebola-treatment-units-with-3-word-addresses: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=ebola-treatment-units-with-3-word-addresses&limit=100&off: Expecting value: line 1 column 1 (char 0)",
+    "history unicef-im-mcv2: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=unicef-im-mcv2&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history guinea-ebola-evd-2021-subnational-cases-deaths-hospitalisations-and-contact-tracing: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=guinea-ebola-evd-2021-subnational-cases-deaths-hospitalis: Expecting value: line 1 column 1 (char 0)",
+    "history guinea-ebola-2021-subnational-cases: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=guinea-ebola-2021-subnational-cases&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history cholera-outbreaks-in-central-and-west-africa-2013-regional-update: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=cholera-outbreaks-in-central-and-west-africa-2013-regiona: Expecting value: line 1 column 1 (char 0)",
+    "history fts-ebola-coverage: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=fts-ebola-coverage&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history drc-uganda-ebola-outbreak-osm-may-2026: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=drc-uganda-ebola-outbreak-osm-may-2026&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history unicef-im-mcv1: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=unicef-im-mcv1&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history ebola-outbreaks-before-2014: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=ebola-outbreaks-before-2014&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history ebola-west-africa-ebola-treatment-centres-isolation-wards-hospitals-and-transit-centres: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=ebola-west-africa-ebola-treatment-centres-isolation-wards: Expecting value: line 1 column 1 (char 0)",
+    "history cholera-outbreaks-in-central-and-west-africa-2012-regional-update: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=cholera-outbreaks-in-central-and-west-africa-2012-regiona: Expecting value: line 1 column 1 (char 0)",
+    "history cholera-outbreaks-in-central-and-west-africa-2016-regional-update: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=cholera-outbreaks-in-central-and-west-africa-2016-regiona: Expecting value: line 1 column 1 (char 0)",
+    "history unicef-im-ipv1: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=unicef-im-ipv1&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history guinea-ebola-wfp-vam-food-security-reduced-coping-strategies-index-and-price-data: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=guinea-ebola-wfp-vam-food-security-reduced-coping-strateg: Expecting value: line 1 column 1 (char 0)",
+    "history philippine-dengue-cases-and-deaths: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=philippine-dengue-cases-and-deaths&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history polio-vaccination-campaign-in-the-gaza-strip: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=polio-vaccination-campaign-in-the-gaza-strip&limit=100&of: Expecting value: line 1 column 1 (char 0)",
+    "history ebola-unicef-eoc-psychosocial-pillar-database-drc-april-2019: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=ebola-unicef-eoc-psychosocial-pillar-database-drc-april-2: Expecting value: line 1 column 1 (char 0)",
+    "history cholera-outbreaks-in-central-and-west-africa-2017-regional-update: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=cholera-outbreaks-in-central-and-west-africa-2017-regiona: Expecting value: line 1 column 1 (char 0)",
+    "history world-health-organization-who-cholera-data: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=world-health-organization-who-cholera-data&limit=100&offs: Expecting value: line 1 column 1 (char 0)",
+    "history yemen-cholera-outbreak-daily-epidemiology-update: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=yemen-cholera-outbreak-daily-epidemiology-update&limit=10: Expecting value: line 1 column 1 (char 0)",
+    "history unicef-im-pol3: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=unicef-im-pol3&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history sierra-leone-ebola-wfp-vam-food-security-reduced-coping-strategies-index-and-price-data: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=sierra-leone-ebola-wfp-vam-food-security-reduced-coping-s: Expecting value: line 1 column 1 (char 0)",
+    "history unicef-eoc-psychosocial-mai-2019-dataset: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=unicef-eoc-psychosocial-mai-2019-dataset&limit=100&offset: Expecting value: line 1 column 1 (char 0)",
+    "history rwanda-mpox-subnational-cases-2024: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=rwanda-mpox-subnational-cases-2024&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history unicef-im-ipv2: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=unicef-im-ipv2&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history ethiopia-cholera-cases-by-region: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=ethiopia-cholera-cases-by-region&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history topline-ebola-outbreak-figures: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=topline-ebola-outbreak-figures&limit=100&offset=0: Expecting value: line 1 column 1 (char 0)",
+    "history democratic-republic-of-congo-ebola-2021-subnational-cases: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=democratic-republic-of-congo-ebola-2021-subnational-cases: Expecting value: line 1 column 1 (char 0)",
+    "history moh-ebola-cases-database-as-of-30-june-2019: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=moh-ebola-cases-database-as-of-30-june-2019&limit=100&off: Expecting value: line 1 column 1 (char 0)",
+    "history republique-democratique-du-congo-cas-et-deces-d-ebola: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=republique-democratique-du-congo-cas-et-deces-d-ebola&lim: Expecting value: line 1 column 1 (char 0)",
+    "history guinea-ebola-2021-cumulative-cases-national: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=guinea-ebola-2021-cumulative-cases-national&limit=100&off: Expecting value: line 1 column 1 (char 0)",
+    "history ebola-unicef-eoc-psychosocial-juin-2019-dataset: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=ebola-unicef-eoc-psychosocial-juin-2019-dataset&limit=100: Expecting value: line 1 column 1 (char 0)",
+    "history cholera-outbreaks-in-central-and-west-africa-2015-regional-update: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=cholera-outbreaks-in-central-and-west-africa-2015-regiona: Expecting value: line 1 column 1 (char 0)",
+    "history indonesia-dengue-fever-cases-by-province-2015-2017: bad JSON from https://data.humdata.org/api/3/action/package_activity_list?id=indonesia-dengue-fever-cases-by-province-2015-2017&limit=: Expecting value: line 1 column 1 (char 0)"
+   ],
+   "requested": {
+    "since": "2024-04-01T00:00:00Z",
+    "until": "2026-11-25T19:07:37Z"
+   },
+   "requests": 65,
+   "resumable": true,
+   "slug": "hdx",
+   "source": "HDX",
+   "status": "partial"
+  },
+  "PAHO": {
+   "class": "official",
+   "date_field": "list <time datetime> (posting date)",
+   "failures": 0,
+   "intervals": [
+    [
+     "2024-04-01T00:00:00Z",
+     "2026-11-25T03:38:24Z"
+    ]
+   ],
+   "items": 89,
+   "notes": [],
+   "pages": 5,
+   "requested": {
+    "since": "2024-04-01T00:00:00Z",
+    "until": "2026-11-25T03:38:24Z"
+   },
+   "requests": 5,
+   "resumable": false,
+   "slug": "paho",
+   "source": "PAHO",
+   "status": "complete"
+  },
+  "ReliefWeb": {
+   "class": "aggregator",
+   "date_field": "date.created",
+   "failures": 0,
+   "intervals": [],
+   "items": 0,
+   "notes": [],
+   "reason": "RELIEFWEB_APPNAME is not set: ReliefWeb needs a pre-approved app name (PLAN decision 9); no request made",
+   "requested": {
+    "since": "2024-04-01T00:00:00Z",
+    "until": "2026-11-25T03:38:25Z"
+   },
+   "requests": 0,
+   "resumable": false,
+   "slug": "reliefweb",
+   "source": "ReliefWeb",
+   "status": "skipped"
+  },
+  "WOAH WAHIS": {
+   "chains_failed": 3,
+   "chains_left": 0,
+   "checks": {
+    "compared": 1141,
+    "latest_date_diff_s": 0
+   },
+   "class": "animal",
+   "date_field": "report.reportedOn",
+   "events_on_pulse_pathogens": 1144,
+   "failures": 9,
+   "intervals": [],
+   "items": 8554,
+   "notes": [
+    "event 3449: report 173384 failed 3 times: HTTP 404 for https://wahis.woah.org/api/v1/pi/review/report/173384/all-information?language=en",
+    "event 3990: report 171239 failed 3 times: HTTP 404 for https://wahis.woah.org/api/v1/pi/review/report/171239/all-information?language=en",
+    "event 4309: report 187243 failed 3 times: HTTP 404 for https://wahis.woah.org/api/v1/pi/review/report/187243/all-information?language=en"
+   ],
+   "other_disease_events": 1076,
+   "requested": {
+    "since": "2024-04-01T00:00:00Z",
+    "until": "2026-11-25T03:38:23Z"
+   },
+   "requests": 8596,
+   "resumable": false,
+   "since": "2024-04-01T00:00:00Z",
+   "slug": "wahis",
+   "source": "WOAH WAHIS",
+   "status": "partial",
+   "until": "2026-11-25T03:38:23Z"
+  }
+ },
+ "unfinished": [
+  "gdelt",
+  "hdx"
+ ]
+}
